@@ -1,0 +1,78 @@
+# ============================================================
+# MyCoder — 本地 Coding Agent Harness 默认配置
+# 所有端口均绑定 127.0.0.1,不依赖任何云端服务。
+# ============================================================
+
+# --- 工作区(工具调用的沙箱边界) ---
+workspace:
+  root: "."                 # 相对当前工作目录;也支持绝对路径
+  allow_absolute: false     # 是否允许工具接收绝对路径(默认否,强制工作区内)
+
+# --- 模型后端(2 类) ---
+model:
+  backend: mock             # mock | local_openai
+  mock:
+    seed: 42                # 决定脚本化响应的确定性
+  local_openai:
+    base_url: "http://127.0.0.1:8080/v1"   # 本地 OpenAI 兼容服务(llama.cpp / vLLM / Ollama)
+    api_key: "local"                        # 本地服务通常可任意
+    model: "qwen2.5-coder-7b"               # 服务里注册的模型名
+    temperature: 0.0
+    timeout_seconds: 60
+
+# --- Harness 主循环 ---
+harness:
+  max_steps: 30                 # 单任务最大 agent 步数,防死循环
+  max_tool_calls_per_turn: 8    # 单轮最多并行工具调用数
+
+# --- 长上下文治理 ---
+context:
+  budget_tokens: 4000           # 软预算:超过则触发裁剪
+  hard_limit_tokens: 6000       # 硬上限:裁剪后仍应低于此值
+  keep_last_turns: 6            # 保留最近 N 轮对话原文
+  keep_last_tool_results: 8     # 保留最近 N 条工具返回
+  max_file_content_chars: 8000  # 单次工具返回里文件内容截断阈值(字符)
+  compressible_age: 3           # 超过该轮数的历史被折叠为摘要
+
+# --- 结构化记忆 ---
+memory:
+  enabled: true
+  root: ".mycoder/memory"       # 记忆持久化目录(任务/文件/关联 三层)
+  auto_remember_files: true     # 读/写文件后自动沉淀文件摘要
+  followup_inject_summaries: true  # follow-up 任务自动注入文件摘要(避免重读)
+
+# --- Checkpoint / Resume ---
+checkpoint:
+  enabled: true
+  root: ".mycoder/checkpoints"
+  interval_steps: 4             # 每隔 N 步自动落盘
+  on_prune: true                # 上下文裁剪前强制落盘
+  detect_drift: true            # resume 时检测工作区漂移
+
+# --- 工具安全边界 ---
+safety:
+  hitl_policy: prompt           # prompt(交互审批) | allow | deny
+  dedup_enabled: true           # 重复调用拦截(读类短路 / 写类告警)
+  redaction_enabled: true       # 敏感信息脱敏
+  # 高风险 shell 治理:白名单命令 + 黑名单模式
+  shell:
+    allow_commands: ["echo", "ls", "dir", "pwd", "cat", "type", "find", "grep",
+                     "findstr", "git", "python", "python3", "mkdir", "touch"]
+    deny_patterns: ["rm\\s+-rf", "del\\s+/[sq]", "format", "shutdown", "reboot",
+                    "curl", "wget", "chmod\\s+777", ":(){", ">\\s*/dev"]
+  allow_write_outside_ext: []   # 额外允许写入的文件扩展名(默认全放行工作区内)
+
+# --- 运行工件(3 类:轨迹/检查点/指标报告) ---
+artifacts:
+  root: ".mycoder/artifacts"
+  redact_artifacts: true        # 导出工件时脱敏
+
+# --- 日志 ---
+logging:
+  level: INFO
+  file: ".mycoder/harness.log"
+
+# --- localhost API 服务 ---
+api:
+  host: "127.0.0.1"
+  port: 8910

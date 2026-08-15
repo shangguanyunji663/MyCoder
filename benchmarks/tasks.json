@@ -1,0 +1,182 @@
+{
+  "tasks": [
+    {
+      "task_id": "t01_create_file",
+      "layer": "regression",
+      "goal": "在项目中创建 hello.py,内含一个 greet 函数。",
+      "files_hint": ["hello.py"],
+      "script": [
+        {"tool_calls": [{"name": "file_write", "arguments": {"path": "hello.py", "content": "def greet():\n    return 'hello'\n"}}]},
+        {"content": "已创建 hello.py,任务完成。"}
+      ],
+      "expect": {"files_created": ["hello.py"], "final_contains": "hello.py"}
+    },
+    {
+      "task_id": "t02_read_file",
+      "layer": "regression",
+      "goal": "读取 notes.txt 了解项目约定。",
+      "files_hint": ["notes.txt"],
+      "setup_files": {"notes.txt": "项目约定:\n1. 遵循 PEP8\n2. 写测试\nsecret=not-a-real-key\n"},
+      "script": [
+        {"tool_calls": [{"name": "file_read", "arguments": {"path": "notes.txt"}}]},
+        {"content": "已读取 notes.txt。"}
+      ],
+      "expect": {"final_contains": "notes.txt"}
+    },
+    {
+      "task_id": "t03_edit_file",
+      "layer": "regression",
+      "goal": "把 app.py 里的版本号从 1 升到 2。",
+      "files_hint": ["app.py"],
+      "setup_files": {"app.py": "VERSION = 1\n"},
+      "script": [
+        {"tool_calls": [{"name": "file_edit", "arguments": {"path": "app.py", "old_string": "VERSION = 1", "new_string": "VERSION = 2"}}]},
+        {"content": "版本已更新为 2。"}
+      ],
+      "expect": {"file_contains": {"app.py": "VERSION = 2"}}
+    },
+    {
+      "task_id": "t04_list_grep",
+      "layer": "regression",
+      "goal": "列出 src 下的脚本并搜索里面的函数定义。",
+      "files_hint": ["src"],
+      "setup_files": {"src/a.py": "def a():\n    pass\n", "src/b.py": "def b():\n    return 1\n"},
+      "script": [
+        {"tool_calls": [{"name": "file_list", "arguments": {"pattern": "src/*.py"}}]},
+        {"tool_calls": [{"name": "grep_search", "arguments": {"pattern": "def ", "path": "src"}}]},
+        {"content": "列出与搜索均完成。"}
+      ],
+      "expect": {"final_contains": "完成"}
+    },
+
+    {
+      "task_id": "t05_long_refactor",
+      "layer": "context",
+      "goal": "通读 big.py 的多个函数并给出重构意见(长上下文场景)。",
+      "files_hint": ["big.py"],
+      "generate_files": {"big.py": {"kind": "functions", "count": 4000}},
+      "script": [
+        {"tool_calls": [{"name": "file_read", "arguments": {"path": "big.py", "offset": 0, "limit": 200}}]},
+        {"tool_calls": [{"name": "file_read", "arguments": {"path": "big.py", "offset": 400, "limit": 200}}]},
+        {"tool_calls": [{"name": "grep_search", "arguments": {"pattern": "def func_1[0-9]+", "path": "big.py"}}]},
+        {"tool_calls": [{"name": "file_read", "arguments": {"path": "big.py", "offset": 800, "limit": 200}}]},
+        {"tool_calls": [{"name": "grep_search", "arguments": {"pattern": "return ", "path": "big.py"}}]},
+        {"tool_calls": [{"name": "file_read", "arguments": {"path": "big.py", "offset": 1500, "limit": 200}}]},
+        {"tool_calls": [{"name": "grep_search", "arguments": {"pattern": "def func_2[0-9]+", "path": "big.py"}}]},
+        {"content": "已完成 big.py 的通读与重构分析。"}
+      ],
+      "expect": {"final_contains": "重构分析"}
+    },
+    {
+      "task_id": "t06_long_search",
+      "layer": "context",
+      "goal": "在大型日志/源码中做多轮关键词检索(长上下文场景)。",
+      "files_hint": ["data.log"],
+      "generate_files": {"data.log": {"kind": "logs", "count": 5000}},
+      "script": [
+        {"tool_calls": [{"name": "grep_search", "arguments": {"pattern": "INFO", "path": "data.log"}}]},
+        {"tool_calls": [{"name": "grep_search", "arguments": {"pattern": "WARN", "path": "data.log"}}]},
+        {"tool_calls": [{"name": "file_read", "arguments": {"path": "data.log", "offset": 0, "limit": 100}}]},
+        {"tool_calls": [{"name": "grep_search", "arguments": {"pattern": "ERROR", "path": "data.log"}}]},
+        {"tool_calls": [{"name": "grep_search", "arguments": {"pattern": "timeout", "path": "data.log"}}]},
+        {"tool_calls": [{"name": "file_read", "arguments": {"path": "data.log", "offset": 2000, "limit": 100}}]},
+        {"content": "多轮检索完成,已汇总日志要点。"}
+      ],
+      "expect": {"final_contains": "检索"}
+    },
+    {
+      "task_id": "t07_long_multifile",
+      "layer": "context",
+      "goal": "为多个模块补写文档字符串并回读校验(长上下文场景)。",
+      "files_hint": ["pkg"],
+      "generate_files": {"pkg/helper.py": {"kind": "functions", "count": 600}},
+      "script": [
+        {"tool_calls": [{"name": "file_list", "arguments": {"pattern": "pkg/*"}}]},
+        {"tool_calls": [{"name": "file_read", "arguments": {"path": "pkg/helper.py", "offset": 0, "limit": 100}}]},
+        {"tool_calls": [{"name": "file_edit", "arguments": {"path": "pkg/helper.py", "old_string": "def func_0():", "new_string": "def func_0():\n    \"\"\"helper 0\"\"\""}}]},
+        {"tool_calls": [{"name": "file_read", "arguments": {"path": "pkg/helper.py", "offset": 0, "limit": 100}}]},
+        {"tool_calls": [{"name": "grep_search", "arguments": {"pattern": "\"\"\"", "path": "pkg/helper.py"}}]},
+        {"content": "多模块文档字符串已补齐并校验。"}
+      ],
+      "expect": {"final_contains": "补齐"}
+    },
+
+    {
+      "task_id": "t08_build_utils",
+      "layer": "memory",
+      "goal": "实现 utils.py,提供 add/multiply 两个函数。",
+      "files_hint": ["utils.py"],
+      "script": [
+        {"tool_calls": [{"name": "file_write", "arguments": {"path": "utils.py", "content": "def add(a, b):\n    \"\"\"return a+b\"\"\"\n    return a + b\n\ndef multiply(a, b):\n    \"\"\"return a*b\"\"\"\n    return a * b\n"}}]},
+        {"content": "utils.py 已实现 add 与 multiply。"}
+      ],
+      "expect": {"files_created": ["utils.py"], "final_contains": "add"}
+    },
+    {
+      "task_id": "t09_followup_use_utils",
+      "layer": "memory",
+      "goal": "写 main.py 调用 utils 的 add(考察利用记忆而非重读文件)。",
+      "files_hint": ["utils.py", "main.py"],
+      "follow_up_of": "t08_build_utils",
+      "script": [
+        {"tool_calls": [{"name": "memory_query", "arguments": {"query": "utils", "kind": "all"}}]},
+        {"tool_calls": [{"name": "file_write", "arguments": {"path": "main.py", "content": "from utils import add\nprint(add(1, 2))\n"}}]},
+        {"content": "已利用记忆完成 main.py,未重读 utils.py。"}
+      ],
+      "control_script": [
+        {"tool_calls": [{"name": "file_read", "arguments": {"path": "utils.py"}}]},
+        {"tool_calls": [{"name": "file_write", "arguments": {"path": "main.py", "content": "from utils import add\nprint(add(1, 2))\n"}}]},
+        {"content": "已重读 utils.py 后完成 main.py。"}
+      ],
+      "expect": {"files_created": ["main.py"], "final_contains": "utils"},
+      "assert_no_re_read": ["utils.py"]
+    },
+    {
+      "task_id": "t10_build_config",
+      "layer": "memory",
+      "goal": "实现 config.py,导出 APP_NAME 与 DEBUG 两个常量。",
+      "files_hint": ["config.py"],
+      "script": [
+        {"tool_calls": [{"name": "file_write", "arguments": {"path": "config.py", "content": "APP_NAME = 'mycoder'\nDEBUG = True\n"}}]},
+        {"content": "config.py 已实现。"}
+      ],
+      "expect": {"files_created": ["config.py"]}
+    },
+    {
+      "task_id": "t11_followup_use_config",
+      "layer": "memory",
+      "goal": "写 boot.py 引用 config 的常量(考察利用记忆而非重读文件)。",
+      "files_hint": ["config.py", "boot.py"],
+      "follow_up_of": "t10_build_config",
+      "script": [
+        {"tool_calls": [{"name": "memory_query", "arguments": {"query": "config", "kind": "all"}}]},
+        {"tool_calls": [{"name": "file_write", "arguments": {"path": "boot.py", "content": "from config import APP_NAME\nprint(APP_NAME)\n"}}]},
+        {"content": "已利用记忆完成 boot.py。"}
+      ],
+      "control_script": [
+        {"tool_calls": [{"name": "file_read", "arguments": {"path": "config.py"}}]},
+        {"tool_calls": [{"name": "file_write", "arguments": {"path": "boot.py", "content": "from config import APP_NAME\nprint(APP_NAME)\n"}}]},
+        {"content": "已重读 config.py 后完成 boot.py。"}
+      ],
+      "expect": {"files_created": ["boot.py"]},
+      "assert_no_re_read": ["config.py"]
+    },
+
+    {
+      "task_id": "t12_resume_scenario",
+      "layer": "resume",
+      "goal": "分阶段构建一个小模块(用于中断/恢复/漂移场景)。",
+      "files_hint": ["mod/__init__.py"],
+      "script": [
+        {"tool_calls": [{"name": "file_write", "arguments": {"path": "mod/step1.txt", "content": "step1 done\n"}}]},
+        {"tool_calls": [{"name": "file_write", "arguments": {"path": "mod/step2.txt", "content": "step2 done\n"}}]},
+        {"tool_calls": [{"name": "file_read", "arguments": {"path": "mod/step1.txt"}}]},
+        {"tool_calls": [{"name": "file_write", "arguments": {"path": "mod/step3.txt", "content": "step3 done\n"}}]},
+        {"tool_calls": [{"name": "file_list", "arguments": {"pattern": "mod/*"}}]},
+        {"tool_calls": [{"name": "file_write", "arguments": {"path": "mod/step4.txt", "content": "step4 done\n"}}]},
+        {"content": "模块构建完成。"}
+      ],
+      "expect": {"final_contains": "构建完成"}
+    }
+  ]
+}

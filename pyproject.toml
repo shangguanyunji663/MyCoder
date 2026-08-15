@@ -1,0 +1,40 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mycoder-harness"
+version = "0.1.0"
+description = "MyCoder — 本地 Coding Agent Harness(面向代码仓库长链路任务的本地 Agent 运行底座)"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "MyCoder Dev" }]
+keywords = ["agent", "harness", "tool-calling", "context-management", "checkpoint", "memory", "llm"]
+dependencies = [
+    "PyYAML>=6.0",
+]
+
+[project.optional-dependencies]
+# 本地 OpenAI 兼容后端可选依赖(用标准库 urllib 亦可,不强制 requests)
+http = ["requests>=2.31"]
+# 评测与测试依赖
+test = ["pytest>=8.0"]
+# 可选:本地 HTTPServer 版 API(标准库自带,无需额外依赖)
+
+[project.scripts]
+mycoder = "mycoder.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["mycoder*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+markers = [
+    "layer_regression: Layer-1 harness 回归测试",
+    "layer_context: Layer-2 上下文治理评测",
+    "layer_memory: Layer-3 记忆收益评测",
+    "layer_resume: Layer-4 恢复正确性评测",
+]

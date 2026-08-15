@@ -1,0 +1,173 @@
+"""运行工件:轨迹(trajectory.jsonl)、检查点(checkpoint.json)、指标报告(metrics.json / report.md)。
+
+三类工件对应"结果可复盘"诉求:
+  1. trajectory.jsonl —— 逐步追加的完整轨迹,任何时刻崩溃都能复盘已发生的事;
+  2. checkpoint.json  —— 可恢复断点(由 checkpoint 模块落盘,此处聚合到工件目录);
+  3. metrics.json + report.md —— 聚合指标与人类可读报告(压缩率/工具统计/预算合规等)。
+
+所有工件导出前统一过 Redactor 脱敏。
+"""
+from __future__ import annotations
+
+import os
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Any
+
+from .config import Config
+from .util import atomic_write, ensure_dir, json_dump, now_iso
+
+
+@dataclass
+class Metrics:
+    """运行期指标累加器(线程不安全,单进程顺序使用)。"""
+
+    steps: int = 0
+    tool_calls: int = 0
+    read_calls: int = 0
+    read_cache_hits: int = 0          # 去重/记忆短路命中的读次数
+    write_calls: int = 0
+    prompt_tokens_total: int = 0
+    prompt_budget_tokens: int = 0
+    prunes: int = 0
+    compression_ratios: list = field(default_factory=list)
+    files_remembered: int = 0
+    memory_queries: int = 0
+    denied_actions: int = 0
+    skipped_repeats: int = 0
+
+    def avg_compression_ratio(self) -> float:
+        if not self.compression_ratios:
+            return 0.0
+        return sum(self.compression_ratios) / len(self.compression_ratios)
+
+    def max_compression_ratio(self) -> float:
+        return max(self.compression_ratios, default=0.0)
+
+    def prompt_under_budget(self, budget_tokens: int) -> bool:
+        # 每一步均未超出软预算的合规率近似:此处以累计平均判断
+        if self.steps == 0:
+            return True
+        return (self.prompt_tokens_total / self.steps) <= budget_tokens
+
+    def snapshot(self) -> dict:
+        return {
+            "steps": self.steps,
+            "tool_calls": self.tool_calls,
+            "read_calls": self.read_calls,
+            "read_cache_hits": self.read_cache_hits,
+            "write_calls": self.write_calls,
+            "prompt_tokens_total": self.prompt_tokens_total,
+            "avg_prompt_tokens": round(self.prompt_tokens_total / self.steps, 2) if self.steps else 0,
+            "prunes": self.prunes,
+            "avg_compression_ratio": round(self.avg_compression_ratio(), 4),
+            "max_compression_ratio": round(self.max_compression_ratio(), 4),
+            "files_remembered": self.files_remembered,
+            "memory_queries": self.memory_queries,
+            "denied_actions": self.denied_actions,
+            "skipped_repeats": self.skipped_repeats,
+        }
+
+
+class RunRecorder:
+    """轨迹记录器:逐行追加写 trajectory.jsonl,崩溃可恢复。"""
+
+    def __init__(self, path: Path, redactor=None):
+        self.path = Path(path)
+        ensure_dir(self.path.parent)
+        self.redactor = redactor
+        self._count = 0
+
+    def record(self, obj: dict) -> None:
+        import json
+
+        text = json.dumps(obj, ensure_ascii=False, default=str)
+        if self.redactor is not None:
+            text = self.redactor.redact(text)
+        with open(self.path, "a", encoding="utf-8") as f:
+            f.write(text + "\n")
+        self._count += 1
+
+
+class ArtifactManager:
+    """统一工件目录管理与导出。
+
+    目录结构:
+      artifacts/
+        {task_id}/
+          trajectory.jsonl
+          checkpoint.json
+          metrics.json
+          report.md
+    """
+
+    def __init__(self, root: str | Path, config: Config, redactor=None):
+        self.root = Path(root)
+        self.config = config
+        self.redactor = redactor
+
+    def task_dir(self, task_id: str) -> Path:
+        return ensure_dir(self.root / task_id)
+
+    def export(self, task_id: str, metrics: Metrics, result: dict,
+               checkpoint_obj: Any = None) -> dict[str, str]:
+        """导出三类工件,返回 工件名->绝对路径 映射。"""
+        d = self.task_dir(task_id)
+        paths: dict[str, str] = {}
+
+        # 1. 检查点(如有)
+        if checkpoint_obj is not None:
+            cp = d / "checkpoint.json"
+            json_dump(checkpoint_obj, cp, redactor=self.redactor)
+            paths["checkpoint"] = str(cp)
+
+        # 2. 指标
+        m = d / "metrics.json"
+        json_dump(metrics.snapshot(), m, redactor=self.redactor)
+        paths["metrics"] = str(m)
+
+        # 3. 人类可读报告
+        report = self._render_report(task_id, metrics, result)
+        if self.redactor is not None:
+            report = self.redactor.redact(report)
+        r = d / "report.md"
+        atomic_write(r, report)
+        paths["report"] = str(r)
+
+        # 轨迹文件由 RunRecorder 持续写入,这里确认其路径并在导出清单中标出
+        tr = d / "trajectory.jsonl"
+        if tr.exists():
+            paths["trajectory"] = str(tr)
+        return paths
+
+    @staticmethod
+    def _render_report(task_id: str, metrics: Metrics, result: dict) -> str:
+        m = metrics.snapshot()
+        lines = [
+            f"# MyCoder 运行报告 — {task_id}",
+            "",
+            f"- 生成时间: {now_iso()}",
+            f"- 任务状态: {result.get('status', 'unknown')}",
+            f"- 步数: {m['steps']} / 工具调用: {m['tool_calls']}",
+            "",
+            "## 上下文治理",
+            f"- 平均压缩率: {m['avg_compression_ratio']*100:.2f}%",
+            f"- 最高压缩率: {m['max_compression_ratio']*100:.2f}%",
+            f"- 裁剪次数: {m['prunes']}",
+            "",
+            "## 工具与记忆",
+            f"- 读文件: {m['read_calls']} / 缓存命中: {m['read_cache_hits']}",
+            f"- 写文件: {m['write_calls']}",
+            f"- 沉淀文件摘要: {m['files_remembered']} / 记忆查询: {m['memory_queries']}",
+            f"- 拦截动作: {m['denied_actions']} / 重复跳过: {m['skipped_repeats']}",
+            "",
+            "## 最终回答",
+            "",
+            _quote(result.get("final_answer", "")),
+        ]
+        return "\n".join(lines)
+
+
+def _quote(text: str) -> str:
+    text = (text or "").strip() or "(无)"
+    return "\n".join("> " + ln for ln in text.splitlines()) if text else "> " + text
