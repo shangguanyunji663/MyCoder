@@ -2,7 +2,7 @@
 
 ## 测试架构
 
-MyCoder 采用**四层评测体系**,刻意区分"模型能力"与"系统能力":
+MyCoder 采用**四层评测体系** + **性能测试套件**,刻意区分"模型能力"与"系统能力":
 
 ```
 Layer 1: Harness 回归测试
@@ -16,6 +16,9 @@ Layer 3: 记忆收益评测
 
 Layer 4: 恢复正确性评测
   └─ 验证 checkpoint/resume + 工作区漂移识别边界
+
+Layer 5: 性能测试
+  └─ 使用巨型文件(~4669行)对 8 个维度进行压力测试
 ```
 
 ## 测试数据
@@ -38,6 +41,12 @@ Layer 4: 恢复正确性评测
 - `follow_up_of`: 父任务 ID(用于 memory 层)
 - `control_script`: 对照组脚本(用于 memory 层)
 
+### 巨型测试文件 (examples/giant_test.py)
+用于性能测试和上下文治理演示的自动生成文件:
+- **行数**: ~4669 行
+- **内容**: 100 个函数 + 排序算法(8类) + 设计模式(10类) + 数据结构(6类) + 8 个通用容器类
+- **生成方式**: `python generate_test_file.py`
+
 ## 运行测试
 
 ### 使用 ML2 环境(推荐)
@@ -46,7 +55,7 @@ Layer 4: 恢复正确性评测
 # 激活 ML2 环境(已预装 pytest)
 conda activate ML2
 
-# 运行完整测试套件
+# 运行完整测试套件(162 项)
 & "D:\ANACONDA\envs\ML2\python.exe" -m pytest tests/ -v
 
 # 运行特定测试文件
@@ -57,22 +66,9 @@ conda activate ML2
 
 # 运行特定测试方法
 & "D:\ANACONDA\envs\ML2\python.exe" -m pytest tests/test_eval.py::TestEvalLayers::test_regression_layer -v
-```
 
-### 使用 pytest 标记
-
-```bash
-# 运行所有回归测试
-& "D:\ANACONDA\envs\ML2\python.exe" -m pytest -m layer_regression -v
-
-# 运行所有上下文测试
-& "D:\ANACONDA\envs\ML2\python.exe" -m pytest -m layer_context -v
-
-# 运行所有记忆测试
-& "D:\ANACONDA\envs\ML2\python.exe" -m pytest -m layer_memory -v
-
-# 运行所有恢复测试
-& "D:\ANACONDA\envs\ML2\python.exe" -m pytest -m layer_resume -v
+# 运行性能测试
+& "D:\ANACONDA\envs\ML2\python.exe" -m pytest tests/test_performance.py -v
 ```
 
 ## 四层评测详解
@@ -174,6 +170,106 @@ conda activate ML2
 - 漂移识别准确率: 100%(5/5 漂移检出, 5/5 无漂移正确)
 - 恢复后完成率: 100%
 
+## 性能测试 (Layer 5)
+
+### 概述
+
+`tests/test_performance.py` 使用 `examples/giant_test.py` (~4669 行) 对 MyCoder 各组件进行压力测试。每项测试进行 3 轮取平均,输出 avg/min/max 耗时。
+
+### 巨型测试文件
+
+`examples/giant_test.py` 由 `generate_test_file.py` 自动生成,包含:
+- **100 个函数**: func_0001 到 func_0100,每个执行模乘计算
+- **排序算法 (8 种)**: bubble/quick/merge/heap/insertion/selection/counting/radix sort
+- **设计模式 (10 种)**: Singleton/Factory/Builder/Observer/Strategy/Decorator/Adapter/Proxy/Command/StateMachine/Chain of Responsibility
+- **数据结构 (6 种)**: ListNode/LinkedList/TreeNode/BinaryTree/TrieNode/Trie/Graph (含 BFS/DFS/Dijkstra/环检测)
+- **8 个通用容器类**: 带数据存储/历史记录/统计/__repr__
+
+```bash
+# 生成巨型测试文件
+python generate_test_file.py
+
+# 生成后约 4669 行, ~200KB
+```
+
+### 性能测试模块详解
+
+| 测试模块 | 测试函数 | 说明 | 测量指标 |
+|----------|----------|------|----------|
+| [1] 文件读取 | `test_file_read_performance()` | 读取完整巨型文件、部分读取(100行)、10次重复读取(50行) | 大文件 I/O 吞吐 |
+| [2] 文件列表 | `test_file_list_performance()` | 列出 examples 目录、列出项目根目录 | 目录遍历效率 |
+| [3] Grep 搜索 | `test_grep_performance()` | 搜索 class 定义、func_ 函数、排序算法、设计模式、数据结构 | 正则匹配 + 大文件搜索 |
+| [4] 记忆存储 | `test_memory_performance()` | 存储巨型文件记录、搜索 func/class/sort 关键词 | 摘要生成 + 检索速度 |
+| [5] 上下文管理 | `test_context_performance()` | 巨型内容 token 估算、5 个大消息估算、大上下文组装 | token 估算 + 裁剪效率 |
+| [6] 断点 I/O | `test_checkpoint_performance()` | 保存大型状态(含 10000 字符消息)、加载大型断点 | JSON 序列化/反序列化 |
+| [7] 工作区操作 | `test_workspace_operations()` | 写入大文件、读取大文件、100 个小文件写入、列出 100+ 文件 | 沙箱文件操作效率 |
+| [8] 工具注册 | `test_tool_registry_performance()` | 100 次构建 registry、获取全部 7 个工具、获取工具 schema | 注册表构建 + 查询 |
+
+### 运行性能测试
+
+```bash
+# 运行性能测试(需要先生成 giant_test.py)
+& "D:\ANACONDA\envs\ML2\python.exe" -m pytest tests/test_performance.py -v -s
+
+# 运行性能测试(不显示 print 输出)
+& "D:\ANACONDA\envs\ML2\python.exe" -m pytest tests/test_performance.py -v
+```
+
+### 性能测试预期输出
+
+```
+[1] File Read Performance
+  [read_giant_file] avg=0.0xxx s
+  [read_partial_file] avg=0.0xxx s
+  [10x_partial_reads] avg=0.0xxx s
+
+[2] File List Performance
+  [list_examples_dir] avg=0.0xxx s
+  [list_project_root] avg=0.0xxx s
+
+[3] Grep Search Performance
+  [grep_class_def] avg=0.0xxx s
+  [grep_func_def] avg=0.0xxx s
+  [grep_sort_algo] avg=0.0xxx s
+  [grep_design_pattern] avg=0.0xxx s
+  [grep_data_structure] avg=0.0xxx s
+
+[4] Memory Store Performance
+  [store_giant_file_record] avg=0.0xxx s
+  [memory_search_func] avg=0.0xxx s
+  [memory_search_sort] avg=0.0xxx s
+
+[5] Context Management Performance
+  [estimate_giant_tokens] avg=0.0xxx s
+  [estimate_5x_large_messages] avg=0.0xxx s
+  [assemble_large_context] avg=0.0xxx s
+
+[6] Checkpoint Performance
+  [save_large_checkpoint] avg=0.0xxx s
+  [load_large_checkpoint] avg=0.0xxx s
+
+[7] Workspace Operations Performance
+  [write_large_file] avg=0.0xxx s
+  [read_large_file] avg=0.0xxx s
+  [write_100_small_files] avg=0.0xxx s
+  [list_100_plus_files] avg=0.0xxx s
+
+[8] Tool Registry Performance
+  [build_registry_100x] avg=0.0xxx s
+  [get_all_7_tools] avg=0.0xxx s
+  [get_all_tool_schemas] avg=0.0xxx s
+
+============================================================
+PERFORMANCE SUMMARY
+============================================================
+Test                                Avg(s)     Min(s)     Max(s)
+-----------------------------------------------------------------
+...
+Total tests: 24
+Total time: x.xx s
+============================================================
+```
+
 ## 安全边界测试
 
 ### 参数校验
@@ -201,6 +297,36 @@ conda activate ML2
 & "D:\ANACONDA\envs\ML2\python.exe" -m pytest tests/test_safety.py::TestRedact -v
 ```
 
+## 上下文治理演示
+
+`examples/context_demo.py` 使用 `giant_test.py` 模拟 15 轮上下文膨胀:
+
+```bash
+# 运行上下文治理演示
+& "D:\ANACONDA\envs\ML2\python.exe" examples/context_demo.py
+```
+
+**预期输出**:
+```
+Giant file: 4669 lines, ~200000 chars, ~50000 tokens
+
+Simulating 15 turns (each reads ~300 lines of giant file)
+
+  Turn  1 | Raw:  xxxx tokens -> After:  xxxx tokens | Strategies: []
+  Turn  3 | Raw:  xxxx tokens -> After:  xxxx tokens | Ratio:  xx%
+  Turn  6 | Raw:  xxxx tokens -> After:  xxxx tokens | Strategies: ['fold_old_turns']
+  Turn  9 | Raw:  xxxx tokens -> After:  xxxx tokens | Strategies: ['fold_old_turns', 'drop_stale_turns']
+  Turn 12 | Raw:  xxxx tokens -> After:  xxxx tokens | Strategies: ['fold_old_turns', 'drop_stale_turns', 'truncate_long_content']
+  Turn 15 | Raw:  xxxx tokens -> After:  xxxx tokens | Ratio: ~80%
+
+Final Summary
+  Total turns:        15
+  Without governance:  ~xxxxx tokens (exceeds hard limit by xx)
+  With governance:     ~xxxx tokens (within budget!)
+  Compression ratio:   ~80%
+  Strategies used:     ['fold_old_turns', 'drop_stale_turns', 'truncate_long_content']
+```
+
 ## 评测报告
 
 运行完整评测后,生成报告:
@@ -225,19 +351,24 @@ conda activate ML2
 - ✅ checkpoint: 断点保存/加载、漂移识别
 - ✅ harness: 主循环、安全拦截、去重、记忆、恢复
 - ✅ eval: 四层评测、benchmark 数据完整性
+- ✅ performance: 8 维度性能压力测试
 
 ### 测试用例统计
-- test_models.py: ~15 个用例
-- test_tools.py: ~20 个用例
-- test_sandbox.py: ~15 个用例
-- test_safety.py: ~25 个用例
-- test_context.py: ~15 个用例
-- test_memory.py: ~20 个用例
-- test_checkpoint.py: ~15 个用例
-- test_harness.py: ~20 个用例
-- test_eval.py: ~10 个用例
 
-**总计**: ~155 个测试用例(超过 105 项目标)
+| 测试文件 | 用例数 | 测试内容 |
+|----------|--------|----------|
+| test_models.py | 14 | Mock 脚本 progression/state恢复, LocalOpenAI parse, 工具schema格式 |
+| test_tools.py | 21 | 每种工具的 execute + error case + meta 字段 |
+| test_sandbox.py | 15 | PathEscapeError 拦截, rel兼容, snapshot 指纹, list过滤隐藏 |
+| test_safety.py | 27 | validate_params(11组合)/escape(4场景)/shell(4场景)/HITL(3策略)/dedup(3)/redact(5) |
+| test_context.py | 15 | CJK/ASCII token估计, fold/fold_to_1/enforce_budget, 深拷贝安全, deterministic replay |
+| test_memory.py | 19 | remember_task/update/parent_link, file_symbols/same_hash_skip, relation/link, search(3kind), followup_context, save_load_roundtrip, stats, disabled_no_save |
+| test_checkpoint.py | 15 | save_load_unicode/overwrite, exists/list_all, drift_compare(modified/added/deleted/empty), summary_text |
+| test_harness.py | 15 | run_flow(complete/artifacts/metrics/max_steps/unknown_tool/invalid_params), safety_intercept, dedup, resume_flow |
+| test_eval.py | 13 | benchmark_data(twelve_tasks/unique_ids/layer_dist/scripts/memory_pairs/json_valid), eval_layers, report_writing |
+| test_performance.py | 8 | 文件读取/列表/Grep/记忆/上下文/断点/工作区/工具注册 性能测试 |
+
+**总计**: 162 个测试用例
 
 ## 确定性保证
 
@@ -270,6 +401,15 @@ ls tests/conftest.py
 & "D:\ANACONDA\envs\ML2\python.exe" -c "import sys; sys.path.insert(0, '.'); import mycoder"
 ```
 
+### 性能测试失败
+```bash
+# 确保 giant_test.py 已生成
+python generate_test_file.py
+
+# 查看详细输出
+& "D:\ANACONDA\envs\ML2\python.exe" -m pytest tests/test_performance.py -v -s
+```
+
 ### 评测失败
 ```bash
 # 查看详细输出
@@ -299,8 +439,9 @@ jobs:
         run: |
           pip install -r requirements.txt
           pip install pytest
+      - name: Generate test file
+        run: python generate_test_file.py
       - name: Run tests
         run: pytest tests/ -v
       - name: Run eval
         run: python -m mycoder eval --suite all
-```

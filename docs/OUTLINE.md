@@ -27,7 +27,7 @@
 ### 2. 模型后端 (models/)
 - `base.py`: ModelBackend 抽象基类 + ModelResponse
 - `mock.py`: MockBackend(确定性脚本后端,支持 state/load_state)
-- `local_openai.py`: LocalOpenAIBackend(urllib POST 到 127.0.0.1:8080)
+- `local_openai.py`: LocalOpenAIBackend(urllib POST 到 127.0.0.1:8080, arguments 保持 JSON 字符串)
 
 ### 3. 工具框架 (tools/)
 - `base.py`: Tool 基类 + ToolResult + ToolContext + ToolRegistry
@@ -40,6 +40,7 @@
 - `tokens.py`: token 估算(中文按字、英文按 4 字符/token)
 - `summarizer.py`: 历史摘要器(DeterministicSummarizer, NoopSummarizer)
 - `manager.py`: ContextManager(组装 + 裁剪,深拷贝保证可复现)
+  - 三层裁剪策略: fold_old_turns → drop_stale_turns → truncate_long_content
 
 ### 5. 结构化记忆 (memory/)
 - `store.py`: StructuredMemory(三层存储: tasks/files/relations)
@@ -114,7 +115,7 @@
 
 ## 文件清单
 
-### 核心代码 (~30 个 Python 文件)
+### 核心代码 (~35 个 Python 文件)
 - mycoder/__init__.py, __main__.py, cli.py, config.py, state.py, util.py, artifacts.py, tasks.py
 - mycoder/models/: base.py, mock.py, local_openai.py, __init__.py
 - mycoder/tools/: base.py, sandbox.py, file_tools.py, shell_tool.py, memory_tool.py, __init__.py
@@ -126,17 +127,18 @@
 - mycoder/api/: server.py, __init__.py
 - mycoder/eval/: benchmark.py, experiment.py, runner.py, __init__.py
 
-### 测试 (~10 个测试文件,105+ 测试用例)
+### 测试 (11 个测试文件,162 个测试用例)
 - tests/conftest.py
-- tests/test_models.py
-- tests/test_tools.py
-- tests/test_sandbox.py
-- tests/test_safety.py
-- tests/test_context.py
-- tests/test_memory.py
-- tests/test_checkpoint.py
-- tests/test_harness.py
-- tests/test_eval.py
+- tests/test_models.py (14 个用例)
+- tests/test_tools.py (21 个用例)
+- tests/test_sandbox.py (15 个用例)
+- tests/test_safety.py (27 个用例)
+- tests/test_context.py (15 个用例)
+- tests/test_memory.py (19 个用例)
+- tests/test_checkpoint.py (15 个用例)
+- tests/test_harness.py (15 个用例)
+- tests/test_eval.py (13 个用例)
+- tests/test_performance.py (8 个用例 — 性能测试)
 
 ### 配置与文档
 - config/default.yaml
@@ -145,9 +147,14 @@
 - docs/ARCHITECTURE.md
 - docs/OUTLINE.md (本文件)
 - docs/TESTING.md
+- docs/FINAL_SUMMARY.md
 
-### 示例
-- examples/demo.py
+### 示例与工具
+- examples/demo.py (综合演示)
+- examples/giant_test.py (巨型测试文件, ~4669 行)
+- examples/context_demo.py (上下文治理演示, 15 轮模拟)
+- examples/show_folded.py (折叠后消息展示)
+- generate_test_file.py (生成 giant_test.py 的脚本)
 
 ## 运行方式
 
@@ -158,8 +165,14 @@ conda activate ML2
 # 运行 demo
 & "D:\ANACONDA\envs\ML2\python.exe" examples/demo.py
 
+# 运行上下文治理 Demo
+& "D:\ANACONDA\envs\ML2\python.exe" examples/context_demo.py
+
 # 运行测试
 & "D:\ANACONDA\envs\ML2\python.exe" -m pytest tests/ -v
+
+# 运行性能测试
+& "D:\ANACONDA\envs\ML2\python.exe" -m pytest tests/test_performance.py -v
 
 # 运行评测
 & "D:\ANACONDA\envs\ML2\python.exe" -m mycoder eval --suite all

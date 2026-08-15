@@ -70,14 +70,17 @@ class TestLocalOpenAI:
         b = LocalOpenAIBackend()
         r = b._parse(body)
         assert r.tool_calls[0]["id"] == "c1"
-        assert r.tool_calls[0]["arguments"]["path"] == "a.py"
+        # arguments 保持 JSON 字符串格式（OpenAI 兼容格式）
+        import json
+        assert json.loads(r.tool_calls[0]["arguments"])["path"] == "a.py"
         assert r.usage["prompt_tokens"] == 10
 
     def test_parse_bad_arguments_json(self):
         body = {"choices": [{"message": {"tool_calls": [
             {"id": "c1", "function": {"name": "x", "arguments": "{bad"}}]}}]}
         r = LocalOpenAIBackend()._parse(body)
-        assert "_raw" in r.tool_calls[0]["arguments"]
+        # arguments 保持原始字符串，不做解析
+        assert r.tool_calls[0]["arguments"] == "{bad"
 
     def test_parse_plain_content(self):
         body = {"choices": [{"message": {"content": "你好"}, "finish_reason": "stop"}]}

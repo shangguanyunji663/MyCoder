@@ -19,6 +19,7 @@
 ### 2. 长上下文治理
 - 按「任务目标 / 当前文件 / 历史摘要 / 工具结果」组织上下文
 - 预算裁剪机制:软预算(触发折叠) + 硬限额(强制截断)
+- 三层裁剪策略: fold_old_turns → drop_stale_turns → truncate_long_content
 - 评测指标:
   - 平均压缩率 ~80%
   - 预算内完成率 100%
@@ -51,9 +52,14 @@
   2. **上下文治理**: 预算裁剪收益(治理 vs 不治理的 prompt 长度差)
   3. **记忆收益**: follow-up 重复读文件归零、正确率
   4. **恢复正确性**: checkpoint/resume + 漂移识别边界
-- 12 个 benchmark 任务 + 105 项 pytest 自动化测试
+- 12 个 benchmark 任务 + 162 项 pytest 自动化测试
 - 对照实验: 固定任务、固定数据、仅改变系统开关
 - 运行工件聚合: 可复现的评测报告(JSON + Markdown)
+
+### 7. 性能测试套件
+- 8 大性能测试维度: 文件读写、列目录、Grep 搜索、记忆存储、上下文管理、断点I/O、工作区操作、工具注册
+- 使用真实大文件(~4669 行,包含算法/数据结构/设计模式)进行压力测试
+- 每项测试进行 3 轮取平均,输出 avg/min/max 耗时
 
 ## 项目结构
 
@@ -63,6 +69,7 @@ mycoder/
 ├── pyproject.toml               # 项目元数据与依赖
 ├── requirements.txt             # pip 依赖清单
 ├── .gitignore                   # Git 忽略规则
+├── generate_test_file.py        # 生成巨型测试文件的脚本
 ├── config/
 │   └── default.yaml             # 默认配置文件
 ├── mycoder/                     # 核心代码包
@@ -109,17 +116,21 @@ mycoder/
 │   └── tasks.json               # 12 个 benchmark 任务
 ├── tests/                       # pytest 测试套件
 │   ├── conftest.py
-│   ├── test_models.py
-│   ├── test_tools.py
-│   ├── test_sandbox.py
-│   ├── test_safety.py
-│   ├── test_context.py
-│   ├── test_memory.py
-│   ├── test_checkpoint.py
-│   ├── test_harness.py
-│   └── test_eval.py
+│   ├── test_models.py           # ~14 个用例
+│   ├── test_tools.py            # ~21 个用例
+│   ├── test_sandbox.py          # ~15 个用例
+│   ├── test_safety.py           # ~27 个用例
+│   ├── test_context.py          # ~15 个用例
+│   ├── test_memory.py           # ~19 个用例
+│   ├── test_checkpoint.py       # ~15 个用例
+│   ├── test_harness.py          # ~15 个用例
+│   ├── test_eval.py             # ~13 个用例
+│   └── test_performance.py      # ~8 个用例 (性能测试)
 ├── examples/                    # 使用示例
-│   └── demo.py
+│   ├── demo.py                  # 综合演示
+│   ├── giant_test.py            # 巨型测试文件(~4669行)
+│   ├── context_demo.py          # 上下文治理演示(15轮模拟)
+│   └── show_folded.py           # 折叠后消息展示工具
 └── docs/                        # 文档
     ├── ARCHITECTURE.md
     ├── OUTLINE.md
@@ -147,17 +158,26 @@ pip install -r requirements.txt
 ### 运行 Demo
 
 ```bash
-# 使用 ML2 环境运行 demo
+# 综合 Demo
 & "D:\ANACONDA\envs\ML2\python.exe" examples/demo.py
+
+# 上下文治理 Demo (模拟 15 轮上下文膨胀)
+& "D:\ANACONDA\envs\ML2\python.exe" examples/context_demo.py
+
+# 查看折叠后消息
+& "D:\ANACONDA\envs\ML2\python.exe" examples/show_folded.py
 ```
 
 ### 运行测试
 
 ```bash
-# 使用 ML2 环境运行完整测试套件
+# 完整测试套件(单元 + 性能)
 & "D:\ANACONDA\envs\ML2\python.exe" -m pytest tests/ -v
 
-# 运行特定层测试
+# 仅运行性能测试
+& "D:\ANACONDA\envs\ML2\python.exe" -m pytest tests/test_performance.py -v
+
+# 仅运行特定层测试
 & "D:\ANACONDA\envs\ML2\python.exe" -m pytest tests/test_eval.py::TestEvalLayers -v
 ```
 
@@ -190,6 +210,7 @@ curl http://127.0.0.1:8910/health
 - `model.backend`: 模型后端(mock / local_openai)
 - `context.budget_tokens`: 上下文软预算(token 数)
 - `context.hard_limit_tokens`: 上下文硬上限
+- `context.keep_last_turns`: 保留最近 N 轮原文
 - `memory.enabled`: 是否启用结构化记忆
 - `checkpoint.enabled`: 是否启用断点保存
 - `safety.hitl_policy`: 高风险审批策略(prompt / allow / deny)

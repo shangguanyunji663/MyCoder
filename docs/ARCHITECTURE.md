@@ -93,11 +93,12 @@ RunResult + Artifacts
 
 ### ModelBackend
 - **MockBackend**: 脚本化响应,支持 state()/load_state() 以支持 resume
-- **LocalOpenAIBackend**: urllib POST 到 127.0.0.1:8080/v1/chat/completions
+- **LocalOpenAIBackend**: urllib POST 到 127.0.0.1:8080/v1/chat/completions, arguments 保持 JSON 字符串格式
 
 ### ToolRegistry
 - 7 类工具: file_read/write/edit/list, grep_search, shell_exec, memory_query
 - 每个工具定义: name, description, parameters (JSON Schema), danger (safe/warn/hitl)
+- 构建方式: `build_registry(memory=None)` 工厂函数
 
 ### Workspace (沙箱)
 - resolve(path): 安全解析路径,拦截逃逸
@@ -116,6 +117,10 @@ RunResult + Artifacts
 - assemble(): 组装并裁剪,返回送入模型的消息列表
   - 深拷贝裁剪,不污染 raw_turns
   - 硬限额强制:逐级截断最长消息,保证 100% 预算内
+- 三层裁剪策略:
+  1. **fold_old_turns**: 折叠超出 keep_last_turns 的旧轮次为滚动摘要
+  2. **drop_stale_turns**: 仍超硬限时折叠到仅保留最近 1 轮原文
+  3. **truncate_long_content**: 逐级截断最长消息直至达标
 
 ### StructuredMemory
 - 三层存储:
@@ -124,6 +129,7 @@ RunResult + Artifacts
   - relations: {task_files, task_parent}
 - remember_file(): 内容哈希一致则跳过(去重关键)
 - followup_context(): 生成注入 follow-up 任务的记忆块
+- search(query, kind="all"): 检索记忆
 
 ### CheckpointStore
 - save(task_id, snapshot): 落盘断点(JSON)
@@ -142,6 +148,18 @@ RunResult + Artifacts
 - resume(task_id): 从断点恢复
 - _execute_tools(): 安全链 + 执行 + 脱敏 + 记忆沉淀
 - _checkpoint(): 周期性/裁剪前/中断时保存断点
+
+## 巨型测试文件
+
+`examples/giant_test.py` 是一个自动生成的约 4669 行测试文件,用于压力测试和上下文治理演示:
+
+- **100 个函数**: func_0001 到 func_0100
+- **排序算法**: bubble/quick/merge/heap/insertion/selection/counting/radix sort
+- **设计模式**: Singleton/Factory/Builder/Observer/Strategy/Decorator/Adapter/Proxy/Command/StateMachine/Chain of Responsibility
+- **数据结构**: ListNode/LinkedList/TreeNode/BinaryTree/TrieNode/Trie/Graph (含 BFS/DFS/最短路径/环检测)
+- **8 个类**: 带数据存储/统计/__repr__ 的通用容器类
+
+生成方式: `python generate_test_file.py`
 
 ## 扩展点
 
@@ -166,6 +184,7 @@ RunResult + Artifacts
 - 历史摘要: 确定性压缩,不依赖 LLM
 - 去重缓存: 内存级,避免重复读盘
 - 深拷贝裁剪: 保证可复现,但增加内存开销(可接受,单任务 ~30 步)
+- 巨型文件测试: `examples/giant_test.py` (~4669 行) 用于压力测试
 
 ## 测试策略
 
