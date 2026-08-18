@@ -28,3 +28,6 @@ tests/_workspace*/
 /tmp/
 # ZCode session artifacts
 .zcode/
+
+# WorkBuddy session artifacts
+.workbuddy/
