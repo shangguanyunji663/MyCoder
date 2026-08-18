@@ -27,7 +27,10 @@ class Metrics:
     read_cache_hits: int = 0          # 去重/记忆短路命中的读次数
     write_calls: int = 0
     prompt_tokens_total: int = 0
+    completion_tokens_total: int = 0
+    cost_usd: float = 0.0            # 若配置了 model.pricing 则累计,否则为 0
     prompt_budget_tokens: int = 0
+    latency_ms_total: int = 0
     prunes: int = 0
     compression_ratios: list = field(default_factory=list)
     files_remembered: int = 0
@@ -57,7 +60,12 @@ class Metrics:
             "read_cache_hits": self.read_cache_hits,
             "write_calls": self.write_calls,
             "prompt_tokens_total": self.prompt_tokens_total,
+            "completion_tokens_total": self.completion_tokens_total,
+            "cost_usd": round(self.cost_usd, 6),
             "avg_prompt_tokens": round(self.prompt_tokens_total / self.steps, 2) if self.steps else 0,
+            "avg_completion_tokens": (round(self.completion_tokens_total / self.steps, 2)
+                                      if self.steps else 0),
+            "avg_latency_ms": round(self.latency_ms_total / self.steps, 1) if self.steps else 0,
             "prunes": self.prunes,
             "avg_compression_ratio": round(self.avg_compression_ratio(), 4),
             "max_compression_ratio": round(self.max_compression_ratio(), 4),
@@ -148,6 +156,9 @@ class ArtifactManager:
             f"- 生成时间: {now_iso()}",
             f"- 任务状态: {result.get('status', 'unknown')}",
             f"- 步数: {m['steps']} / 工具调用: {m['tool_calls']}",
+            f"- Token 用量: prompt={m['prompt_tokens_total']}, completion={m['completion_tokens_total']}"
+            + (f", 估计成本=${m['cost_usd']:.5f}" if m['cost_usd'] > 0 else ""),
+            f"- 平均延迟: {m['avg_latency_ms']:.0f}ms/步",
             "",
             "## 上下文治理",
             f"- 平均压缩率: {m['avg_compression_ratio']*100:.2f}%",

@@ -25,6 +25,7 @@ from ..artifacts import ArtifactManager, Metrics, RunRecorder
 from ..checkpoint import CheckpointStore, DriftReport, WorkspaceDriftDetector
 from ..config import Config
 from ..context import ContextManager, PruneInfo
+from ..cost import CostTracker
 from ..memory import StructuredMemory
 from ..models import ModelBackend
 from ..safety import Redactor, SafetyGuard
@@ -60,7 +61,8 @@ def _turn_from_dict(t: dict) -> dict:
 def _metrics_restore(snap: dict) -> Metrics:
     m = Metrics()
     for f in ("steps", "tool_calls", "read_calls", "read_cache_hits", "write_calls",
-              "prompt_tokens_total", "prompt_budget_tokens", "prunes",
+              "prompt_tokens_total", "completion_tokens_total", "cost_usd",
+              "latency_ms_total", "prunes",
               "files_remembered", "memory_queries", "denied_actions", "skipped_repeats"):
         if f in snap:
             setattr(m, f, snap[f])
@@ -92,7 +94,8 @@ class AgentHarness:
     def __init__(self, config: Config, backend: ModelBackend, workspace: Workspace,
                  registry: ToolRegistry, memory: StructuredMemory | None = None,
                  guard: SafetyGuard | None = None, checkpoint: CheckpointStore | None = None,
-                 artifacts: ArtifactManager | None = None, redactor: Redactor | None = None):
+                 artifacts: ArtifactManager | None = None, redactor: Redactor | None = None,
+                 summarizer=None):
         self.config = config
         self.backend = backend
         self.workspace = workspace
@@ -104,7 +107,8 @@ class AgentHarness:
         self.artifacts = artifacts or ArtifactManager(config.get("artifacts.root", ".mycoder/artifacts"),
                                                       config, redactor=self.redactor)
         self.guard = guard or SafetyGuard(config, workspace, redactor=self.redactor)
-        self.context = ContextManager(config)
+        self.context = ContextManager(config, summarizer=summarizer)
+        self.cost_tracker = CostTracker.from_config(config)
         self.logger = get_logger(config)
         self.metrics = Metrics()
         self.current_task_id: str | None = None
@@ -129,7 +133,13 @@ class AgentHarness:
                              enabled=config.get("checkpoint.enabled", True))
         am = ArtifactManager(config.get("artifacts.root", ".mycoder/artifacts"),
                              config, redactor=redactor)
-        return cls(config, backend, ws, registry, memory, guard, cp, am, redactor)
+        # 摘要器:llm 模式复用主后端压缩折叠历史(失败自动回退确定性)
+        summarizer = None
+        if config.get("context.summarizer") == "llm":
+            from ..context.summarizer import LLMSummarizer
+            summarizer = LLMSummarizer(backend=backend)
+        return cls(config, backend, ws, registry, memory, guard, cp, am, redactor,
+                   summarizer=summarizer)
 
     # ------------------------------------------------------------------
     def run(self, task: TaskInput, stop_after_steps: int | None = None) -> RunResult:
@@ -210,6 +220,13 @@ class AgentHarness:
                 resp = self.backend.complete(messages, self.registry.schemas())
                 latency_ms = int((time.time() - t0) * 1000)
 
+                # 2b) 计量:真实 usage(若后端提供)+ 延迟;后端未提供时 completion 用 0 占位
+                usage = getattr(resp, "usage", None) or {}
+                p_tokens = int(usage.get("prompt_tokens") or self.context.last_prune.after_tokens)
+                c_tokens = int(usage.get("completion_tokens") or 0)
+                model_name = getattr(self.backend, "model", "") or "unknown"
+                step_cost = self.cost_tracker.cost_of(model_name, p_tokens, c_tokens)
+
                 assistant = Message("assistant", resp.content,
                                     tool_calls=resp.tool_calls or None)
 
@@ -218,16 +235,22 @@ class AgentHarness:
                     final_answer = resp.content
                     self.context.append_turn(assistant, [])
                     steps.append(Step(index=step_idx, assistant=assistant,
-                                      prompt_tokens=self.context.last_prune.after_tokens,
+                                      prompt_tokens=p_tokens,
                                       prompt_before_tokens=self.context.last_prune.before_tokens,
+                                      completion_tokens=c_tokens,
                                       pruned=self.context.last_prune.pruned,
                                       prune_strategies=self.context.last_prune.strategies,
                                       latency_ms=latency_ms))
                     self.metrics.steps += 1
-                    self.metrics.prompt_tokens_total += self.context.last_prune.after_tokens
+                    self.metrics.prompt_tokens_total += p_tokens
+                    self.metrics.completion_tokens_total += c_tokens
+                    self.metrics.latency_ms_total += latency_ms
+                    self.metrics.cost_usd += step_cost
                     recorder.record({"type": "step", "index": step_idx,
                                      "assistant": _msg_to_dict(assistant),
-                                     "tool_calls": [], "latency_ms": latency_ms, "ts": now_iso()})
+                                     "tool_calls": [], "latency_ms": latency_ms,
+                                     "prompt_tokens": p_tokens, "completion_tokens": c_tokens,
+                                     "ts": now_iso()})
                     break
 
                 # 4) 执行工具
@@ -235,8 +258,9 @@ class AgentHarness:
                 self.context.append_turn(assistant, tool_msgs)
 
                 step = Step(index=step_idx, assistant=assistant, tool_calls=calls,
-                            prompt_tokens=self.context.last_prune.after_tokens,
+                            prompt_tokens=p_tokens,
                             prompt_before_tokens=self.context.last_prune.before_tokens,
+                            completion_tokens=c_tokens,
                             pruned=self.context.last_prune.pruned,
                             prune_strategies=self.context.last_prune.strategies,
                             latency_ms=latency_ms)
@@ -245,7 +269,10 @@ class AgentHarness:
 
                 # 5) 指标 & checkpoint
                 self.metrics.steps += 1
-                self.metrics.prompt_tokens_total += self.context.last_prune.after_tokens
+                self.metrics.prompt_tokens_total += p_tokens
+                self.metrics.completion_tokens_total += c_tokens
+                self.metrics.latency_ms_total += latency_ms
+                self.metrics.cost_usd += step_cost
                 if self.context.last_prune.pruned:
                     self.metrics.prunes += 1
                     self.metrics.compression_ratios.append(self.context.last_prune.ratio)
@@ -423,6 +450,7 @@ class AgentHarness:
             } for c in step.tool_calls],
             "prompt_tokens": step.prompt_tokens,
             "prompt_before_tokens": step.prompt_before_tokens,
+            "completion_tokens": step.completion_tokens,
             "pruned": step.pruned,
             "prune_strategies": step.prune_strategies,
             "latency_ms": step.latency_ms,

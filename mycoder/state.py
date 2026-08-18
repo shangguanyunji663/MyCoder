@@ -55,12 +55,13 @@ class ToolCall:
 
 @dataclass
 class Step:
-    """Harness 的一步(一轮 模型→工具 往返)。"""
+    """Harness 主循环中的一步(一轮 模型→工具 往返)。"""
     index: int
     assistant: Message | None = None
     tool_calls: list[ToolCall] = field(default_factory=list)
     prompt_tokens: int = 0       # 本轮实际送入模型的 prompt token 数(裁剪后)
     prompt_before_tokens: int = 0  # 裁剪前 token 数(评测压缩率用)
+    completion_tokens: int = 0   # 模型输出 token 数(来自 API usage)
     pruned: bool = False
     prune_strategies: list[str] = field(default_factory=list)
     latency_ms: int = 0
