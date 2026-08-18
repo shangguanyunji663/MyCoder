@@ -29,7 +29,13 @@ DEFAULT: dict[str, Any] = {
             "model": "qwen2.5-coder-7b",
             "temperature": 0.0,
             "timeout_seconds": 60,
+            "max_retries": 3,
+            "backoff_base": 0.5,
+            "backoff_cap": 8.0,
+            "stream": False,
         },
+        # 成本核算价目(每 1k token 美元)。通配键 "*" 作为缺省;未配置则不计成本。
+        "pricing": {},
     },
     "harness": {"max_steps": 30, "max_tool_calls_per_turn": 8},
     "context": {
@@ -39,6 +45,7 @@ DEFAULT: dict[str, Any] = {
         "keep_last_tool_results": 8,
         "max_file_content_chars": 8000,
         "compressible_age": 3,
+        "summarizer": "deterministic",  # deterministic | llm
     },
     "memory": {
         "enabled": True,

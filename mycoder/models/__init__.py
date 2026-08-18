@@ -35,5 +35,9 @@ def create_backend(config) -> ModelBackend:
             model=o.get("model", "qwen2.5-coder-7b"),
             temperature=o.get("temperature", 0.0),
             timeout_seconds=o.get("timeout_seconds", 60),
+            max_retries=o.get("max_retries", 3),
+            backoff_base=o.get("backoff_base", 0.5),
+            backoff_cap=o.get("backoff_cap", 8.0),
+            stream=o.get("stream", False),
         )
     raise ValueError(f"未知模型后端: {kind}(支持 mock / local_openai)")
