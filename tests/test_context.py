@@ -124,3 +124,39 @@ class TestSummarizer:
     def test_truncate_util(self):
         assert len(truncate("a" * 1000, 100)) <= 100
         assert truncate("short", 100) == "short"
+
+
+class TestLLMSummarizer:
+    def test_without_backend_falls_back_to_deterministic(self):
+        from mycoder.context import LLMSummarizer
+        s = LLMSummarizer(backend=None)
+        out = s.summarize_turn(1, "结论", [("file_read", "内容")])
+        assert "[步骤 1]" in out
+
+    def test_uses_backend_content(self):
+        from mycoder.context import LLMSummarizer
+        from mycoder.models import MockBackend
+        # 无脚本、固定 default_answer => 每次摘要都返回同一文本
+        backend = MockBackend(script=[], default_answer="模型摘要:完成")
+        s = LLMSummarizer(backend=backend)
+        out = s.summarize_turn(1, "x", [("file_read", "y")])
+        assert "模型摘要" in out
+
+    def test_backend_failure_falls_back(self):
+        from mycoder.context import LLMSummarizer
+
+        class _Broken:
+            def complete(self, *a, **k):
+                raise ConnectionError("down")
+
+        s = LLMSummarizer(backend=_Broken())
+        out = s.summarize_turn(1, "结论", [("file_read", "内容")])
+        assert "[步骤 1]" in out
+
+    def test_empty_backend_content_falls_back(self):
+        from mycoder.context import LLMSummarizer
+        from mycoder.models import MockBackend
+        backend = MockBackend(script=[], default_answer="   ")
+        s = LLMSummarizer(backend=backend)
+        out = s.summarize_turn(1, "结论", [("file_read", "内容")])
+        assert "[步骤 1]" in out

@@ -39,10 +39,13 @@ def _generate_file(spec: dict) -> str:
 
 class EvalRunner:
     def __init__(self, config: Config, output_dir: str | Path = ".mycoder/eval",
-                 benchmark_path: str | Path | None = None):
+                 benchmark_path: str | Path | None = None,
+                 summarizer=None):
         self.base_config = config
         self.output_dir = Path(output_dir)
         self.benchmark_path = str(benchmark_path) if benchmark_path else None
+        # 可注入摘要器工厂用于 Layer-2 A/B(缺省 None = 只跑确定性摘要)
+        self.summarizer = summarizer
 
     # ------------------------------------------------------------------
     def run_suite(self, suite: str = "all") -> dict[str, dict]:
@@ -102,13 +105,16 @@ class EvalRunner:
 
     def _run(self, task: dict, workdir: Path, script_field: str = "script",
              memory_enabled: bool = True, budget: int | None = None,
-             keep_turns: int | None = None, stop_after: int | None = None):
+             keep_turns: int | None = None, stop_after: int | None = None,
+             summarizer=None):
         from ..agent import AgentHarness
         cfg = self._cfg_for(workdir, budget=budget, keep_turns=keep_turns,
                             memory_enabled=memory_enabled)
         backend = MockBackend(script=task.get(script_field) or [],
                               default_answer=task.get("answer", "任务已完成。"))
         harness = AgentHarness.build(cfg, backend=backend, approver=AllowAllProvider())
+        if summarizer is not None:
+            harness.context.summarizer = summarizer
         self._setup_files(harness, task)
         task_input = TaskInput(task_id=task["task_id"], goal=task.get("goal", ""),
                                files_hint=task.get("files_hint", []),
@@ -195,12 +201,29 @@ class EvalRunner:
                           "governed": gov_total, "ratio": ratio, "compliance": compliance})
             details.append(f"{t['task_id']}: 基线 {base_total} -> 治理 {gov_total} "
                            f"(压缩 {ratio:.2%}, 预算内 {compliance:.0%})")
+            # A/B:注入可选的 LLM 摘要器,对比压缩率(确定性 vs 模型摘要)
+            if self.summarizer is not None:
+                wdl = self.output_dir / "workspaces" / (t["task_id"] + "_governed_llm")
+                rl, _ = self._run(t, wdl, budget=budget, summarizer=self.summarizer)
+                gov_llm = sum(s.prompt_tokens for s in rl.steps)
+                ratio_llm = (1 - gov_llm / base_total) if base_total else 0.0
+                stats[-1]["governed_llm"] = gov_llm
+                stats[-1]["ratio_llm"] = ratio_llm
+                llm_within = sum(1 for s in rl.steps if s.prompt_tokens <= hard)
+                llm_compliance = llm_within / len(rl.steps) if rl.steps else 1.0
+                details.append(f"  ├ LLM摘要: {base_total} -> {gov_llm} "
+                               f"(压缩 {ratio_llm:.2%}, 预算内 {llm_compliance:.0%})")
         ratios = [s["ratio"] for s in stats if s["ratio"] > 0]
         avg = sum(ratios) / len(ratios) if ratios else 0.0
         mx = max(ratios, default=0.0)
         compliance_all = min((s["compliance"] for s in stats), default=0.0)
+        summary = f"平均压缩率 {avg:.2%},最高 {mx:.2%},预算内完成率 {compliance_all:.0%}"
+        if self.summarizer is not None:
+            llm_ratios = [s["ratio_llm"] for s in stats if s.get("ratio_llm", 0) > 0]
+            if llm_ratios:
+                summary += f"; LLM摘要平均压缩率 {sum(llm_ratios)/len(llm_ratios):.2%}"
         return {"ok": bool(ratios) and compliance_all >= 1.0,
-                "summary": f"平均压缩率 {avg:.2%},最高 {mx:.2%},预算内完成率 {compliance_all:.0%}",
+                "summary": summary,
                 "details": details, "stats": stats}
 
     # ------------------------------------------------------------------
