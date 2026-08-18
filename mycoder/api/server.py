@@ -18,7 +18,6 @@ from urllib.parse import urlparse
 from ..config import Config
 from ..models import MockBackend
 from ..state import TaskInput
-from ..tasks import load_task_file
 
 
 class _HarnessPool:
@@ -105,7 +104,7 @@ def make_handler(pool: _HarnessPool, config: Config):
                     out = pool.run_task(body.get("task", body))
                     out["http"] = {"history": "见 GET /artifacts/<id>/report.md"}
                     return self._send(200, out)
-                except Exception as e:  # noqa: BLE001
+                except Exception as e:
                     return self._send(500, {"error": str(e)})
             return self._send(404, {"error": "not found"})
 

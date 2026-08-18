@@ -16,9 +16,10 @@
 """
 from __future__ import annotations
 
+import json
 import logging
 import time
-from typing import Any
+from typing import Any, ClassVar
 
 from ..artifacts import ArtifactManager, Metrics, RunRecorder
 from ..checkpoint import CheckpointStore, DriftReport, WorkspaceDriftDetector
@@ -28,8 +29,9 @@ from ..memory import StructuredMemory
 from ..models import ModelBackend
 from ..safety import Redactor, SafetyGuard
 from ..state import Message, RunResult, Step, TaskInput, ToolCall
-from ..tools import ToolRegistry, ToolContext, Workspace
+from ..tools import ToolContext, ToolRegistry, Workspace
 from ..util import now_iso, short_id
+
 
 # --------------------------------------------------------------------------
 # 消息/轮次 序列化(供 checkpoint 使用)
@@ -85,7 +87,7 @@ def get_logger(config: Config) -> logging.Logger:
 
 class AgentHarness:
     # 参与记忆沉淀 & 统计的文件写类工具
-    _FILE_TOOLS = {"file_read", "file_write", "file_edit"}
+    _FILE_TOOLS: ClassVar[set[str]] = {"file_read", "file_write", "file_edit"}
 
     def __init__(self, config: Config, backend: ModelBackend, workspace: Workspace,
                  registry: ToolRegistry, memory: StructuredMemory | None = None,
@@ -112,7 +114,7 @@ class AgentHarness:
     @classmethod
     def build(cls, config: Config, backend: ModelBackend | None = None,
               workspace_root: str | None = None, memory_root: str | None = None,
-              approver=None) -> "AgentHarness":
+              approver=None) -> AgentHarness:
         from ..models import create_backend
         backend = backend or create_backend(config)
         ws_root = workspace_root or config.get("workspace.root", ".")
@@ -249,13 +251,14 @@ class AgentHarness:
                     self.metrics.compression_ratios.append(self.context.last_prune.ratio)
                     if self.config.get("checkpoint.on_prune", True):
                         self._checkpoint(task, step_idx + 1, reason="prune")
+                interval = int(self.config.get("checkpoint.interval_steps", 4))
                 if self.config.get("checkpoint.enabled", True) and \
-                        (step_idx + 1 - start_step) % int(self.config.get("checkpoint.interval_steps", 4)) == 0:
+                        (step_idx + 1 - start_step) % interval == 0:
                     self._checkpoint(task, step_idx + 1, reason="interval")
             else:
                 status = "max_steps"
                 recorder.record({"type": "max_steps", "ts": now_iso()})
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             status = "error"
             error = f"{type(e).__name__}: {e}"
             self.logger.exception("任务 %s 异常", task.task_id)
@@ -337,7 +340,7 @@ class AgentHarness:
             if result.ok:
                 self.guard.record_executed(tool, params, output)
                 self._after_tool(tool.name, result.meta)
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             meta.update(status="error", error=str(e))
             output = f"[工具异常] {type(e).__name__}: {e}"
         # 脱敏(输出进上下文前)
@@ -346,9 +349,7 @@ class AgentHarness:
     def _after_tool(self, name: str, tool_meta: dict) -> None:
         """工具执行成功后的善后:统计 + 文件摘要沉淀。"""
         self.metrics.tool_calls += 1
-        if name == "file_write":
-            self.metrics.write_calls += 1
-        elif name == "file_edit":
+        if name == "file_write" or name == "file_edit":
             self.metrics.write_calls += 1
         elif name == "file_read":
             self.metrics.read_calls += 1
@@ -367,7 +368,7 @@ class AgentHarness:
                         task_id=self.current_task_id)
                     if updated:
                         self.metrics.files_remembered += 1
-                except Exception:  # noqa: BLE001
+                except Exception:
                     pass
 
     # ------------------------------------------------------------------
@@ -415,7 +416,7 @@ class AgentHarness:
     def _record_step(self, recorder: RunRecorder, step: Step) -> None:
         recorder.record({
             "type": "step", "index": step.index,
-            "assistant": _msg_to_dict(step.assistant),
+            "assistant": _msg_to_dict(step.assistant) if step.assistant else {},
             "tool_calls": [{
                 "id": c.id, "name": c.name, "arguments": c.arguments,
                 "status": c.status, "error": c.error, "meta": c.meta,

@@ -52,7 +52,7 @@ class TestFileLayer:
         assert not mem.has_fresh_summary("a.py", sha256_text("v2"))
 
     def test_summarize_extracts_symbols(self):
-        summary, symbols = summarize_file_content("def f(): pass\n# comment\nclass C: pass\nimport os\n")
+        _summary, symbols = summarize_file_content("def f(): pass\n# comment\nclass C: pass\nimport os\n")
         assert "def f" in symbols[0] and "class C" in symbols[1]
 
 
@@ -107,7 +107,8 @@ class TestPersistence:
         m1.remember_task("t1", goal="g", files=["a.py"])
         m1.remember_file("a.py", content="code", task_id="t1")
         m2 = StructuredMemory(tmp_path / "mem", enabled=True)
-        assert m2.get_task("t1").goal == "g"
+        loaded_task = m2.get_task("t1")
+        assert loaded_task is not None and loaded_task.goal == "g"
         assert m2.get_file("a.py") is not None
 
     def test_stats(self, mem):

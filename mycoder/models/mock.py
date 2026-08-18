@@ -32,7 +32,7 @@ class MockBackend(ModelBackend):
 
     # ------------------------------------------------------------------
     @classmethod
-    def from_recipe(cls, steps: list[dict], answer: str = "任务已完成。") -> "MockBackend":
+    def from_recipe(cls, steps: list[dict], answer: str = "任务已完成。") -> MockBackend:
         """从"配方"构建脚本:steps 里每个 dict 是一次工具调用,逐个对应一轮。
 
         例:
@@ -42,7 +42,7 @@ class MockBackend(ModelBackend):
           ]
         会先生成第 1 轮 file_list,收到结果后再生成第 2 轮 file_read,最后给出 answer。
         """
-        script = [{"tool_calls": [dict(s)]} for s in steps]
+        script: list[dict[str, Any]] = [{"tool_calls": [dict(s)]} for s in steps]
         script.append({"content": answer})
         return cls(script=script)
 
@@ -58,10 +58,9 @@ class MockBackend(ModelBackend):
     # ------------------------------------------------------------------
     def complete(self, messages: list, tools: list[dict] | None = None,
                  temperature: float = 0.0) -> ModelResponse:
-        if self._turn < len(self.script):
-            entry = self.script[self._turn]
-        else:
-            entry = {"content": self.default_answer}
+        entry = (self.script[self._turn]
+                 if self._turn < len(self.script)
+                 else {"content": self.default_answer})
         self._turn += 1
 
         entry = copy.deepcopy(entry)

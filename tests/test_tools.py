@@ -1,8 +1,7 @@
 """7 类工具的功能测试(read/write/edit/list/grep/shell/memory_query)。"""
 import pytest
 
-from mycoder.tools import (ToolContext, Workspace, build_registry,
-                           PathEscapeError)
+from mycoder.tools import PathEscapeError, ToolContext, build_registry
 
 
 @pytest.fixture
@@ -108,7 +107,7 @@ class TestShell:
 
     def test_timeout(self, reg, ctx, workspace):
         r = reg.get("shell_exec").execute(ctx, command="ping -n 5 127.0.0.1", timeout=1)
-        assert not r.ok and "超时" in r.error or r is not None
+        assert (not r.ok and "超时" in r.error) or r is not None
 
 
 class TestMemoryQuery:

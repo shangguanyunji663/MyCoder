@@ -12,6 +12,7 @@ build/
 dist/
 .pytest_cache/
 .mypy_cache/
+.ruff_cache/
 .tox/
 .venv/
 venv/

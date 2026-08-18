@@ -13,11 +13,10 @@ from __future__ import annotations
 import json
 import re
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, ClassVar
 
 from ..tools.base import HITL, Tool
 from ..tools.sandbox import PathEscapeError
-
 
 # --------------------------------------------------------------------------
 # 参数校验(轻量 JSON Schema 子集)
@@ -55,7 +54,7 @@ def _type_ok(expect: str, value: Any) -> bool:
     t = _TYPE_MAP.get(expect)
     if t is None:
         return True
-    return isinstance(value, t)
+    return isinstance(value, t)  # type: ignore[arg-type]
 
 
 # --------------------------------------------------------------------------
@@ -108,7 +107,7 @@ class GuardResult:
 
 
 class SafetyGuard:
-    _PATH_TOOLS = {"file_read", "file_write", "file_edit", "grep_search", "shell_exec"}
+    _PATH_TOOLS: ClassVar[set[str]] = {"file_read", "file_write", "file_edit", "grep_search", "shell_exec"}
 
     def __init__(self, config, workspace, approver: ApprovalProvider | None = None,
                  redactor=None):
@@ -145,7 +144,7 @@ class SafetyGuard:
         # 2. 路径隔离(含 shell.cwd)
         if tool.name in self._PATH_TOOLS:
             for key in ("path", "cwd"):
-                if key in params and params[key]:
+                if params.get(key):
                     try:
                         self.workspace.resolve(params[key])
                     except PathEscapeError as e:

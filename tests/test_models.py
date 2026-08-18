@@ -1,8 +1,7 @@
 """模型后端测试:mock 脚本化语义、状态恢复、工厂装配、OpenAI 兼容解析。"""
 import pytest
 
-from mycoder.models import (LocalOpenAIBackend, MockBackend, ModelResponse,
-                            create_backend, tools_to_openai)
+from mycoder.models import LocalOpenAIBackend, MockBackend, ModelResponse, create_backend, tools_to_openai
 
 
 class TestMockBackend:

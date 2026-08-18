@@ -1,7 +1,11 @@
 """上下文治理测试:token 估算、折叠、硬限额强制、拷贝安全。"""
-from mycoder.context import (ContextManager, DeterministicSummarizer,
-                             NoopSummarizer, estimate_messages,
-                             estimate_tokens)
+from mycoder.context import (
+    ContextManager,
+    DeterministicSummarizer,
+    NoopSummarizer,
+    estimate_messages,
+    estimate_tokens,
+)
 from mycoder.state import Message
 from mycoder.util import truncate
 
@@ -38,7 +42,7 @@ class TestAssemble:
         cm.set_task("t")
         cm.append_turn(Message("assistant", "小"),
                        [Message("tool", "小结果", name="file_read")])
-        msgs = cm.assemble()
+        cm.assemble()
         assert not cm.last_prune.pruned
 
     def test_fold_old_turns(self, config):
@@ -71,7 +75,7 @@ class TestAssemble:
         cfg.set("context.keep_last_turns", 3)
         cm = ContextManager(cfg)
         cm.set_task("t")
-        for i in range(8):
+        for _i in range(8):
             cm.append_turn(Message("assistant", "x" * 400),
                            [Message("tool", "内容" * 2000, name="file_read")])
         msgs = cm.assemble()

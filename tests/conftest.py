@@ -6,7 +6,6 @@
 from __future__ import annotations
 
 import sys
-import shutil
 from pathlib import Path
 
 import pytest
@@ -17,18 +16,17 @@ if str(ROOT) not in sys.path:
 
 from mycoder.config import Config  # noqa: E402
 
-
 # Override pytest's tmp_path to use local directory (avoids Windows permission issues)
 _tmp_base = ROOT / ".pytest_tmp"
 
 
 class LocalTmpPathFactory:
     """Custom tmp_path_factory that uses local .pytest_tmp directory."""
-    
+
     def __init__(self):
         self._basetemp = _tmp_base
         _tmp_base.mkdir(exist_ok=True)
-    
+
     def mktemp(self, basename: str, numbered: bool = True) -> Path:
         """Create a temporary directory."""
         import uuid
@@ -38,7 +36,7 @@ class LocalTmpPathFactory:
             tmp_dir = self._basetemp / basename
         tmp_dir.mkdir(exist_ok=True)
         return tmp_dir
-    
+
     def getbasetemp(self) -> Path:
         """Return the base temporary directory."""
         return self._basetemp

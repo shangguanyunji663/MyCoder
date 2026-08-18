@@ -18,9 +18,8 @@ from pathlib import Path
 from ..config import Config
 from ..models import MockBackend
 from ..safety import AllowAllProvider
-from ..state import TaskInput, RunResult
+from ..state import RunResult, TaskInput
 from .benchmark import by_layer, load_benchmarks
-from .experiment import compare_metrics, format_delta
 
 
 def _generate_file(spec: dict) -> str:
@@ -39,11 +38,11 @@ def _generate_file(spec: dict) -> str:
 
 
 class EvalRunner:
-    def __init__(self, config: Config, output_dir: str = ".mycoder/eval",
-                 benchmark_path: str | None = None):
+    def __init__(self, config: Config, output_dir: str | Path = ".mycoder/eval",
+                 benchmark_path: str | Path | None = None):
         self.base_config = config
         self.output_dir = Path(output_dir)
-        self.benchmark_path = benchmark_path
+        self.benchmark_path = str(benchmark_path) if benchmark_path else None
 
     # ------------------------------------------------------------------
     def run_suite(self, suite: str = "all") -> dict[str, dict]:
@@ -148,7 +147,8 @@ class EvalRunner:
             ok = False
             msgs.append(f"终答不含 {fc!r}")
         if result.status != "completed":
-            ok, _ = False, msgs.append(f"状态非 completed: {result.status}")
+            ok = False
+            msgs.append(f"状态非 completed: {result.status}")
         return ok, msgs
 
     @staticmethod
@@ -217,10 +217,10 @@ class EvalRunner:
             for fo in follows:
                 total += 1
                 rt, ht = self._run(fo, wd, script_field="script", memory_enabled=True)
-                rc, hc = self._run(fo, wd, script_field="control_script", memory_enabled=False)
+                rc, _hc = self._run(fo, wd, script_field="control_script", memory_enabled=False)
                 wt = self._count_reads(rt)
                 wc = self._count_reads(rc)
-                ok, msgs = self._check_expect(rt, ht, fo)
+                ok, _msgs = self._check_expect(rt, ht, fo)
                 correct += int(ok)
                 re_read_with += wt
                 re_read_without += wc
@@ -249,7 +249,7 @@ class EvalRunner:
             for want_drift in (False, True):
                 tag = f"k{k}_{'drift' if want_drift else 'clean'}"
                 wd = self.output_dir / "workspaces" / (t["task_id"] + "_" + tag)
-                rg, hg = self._run(t, wd, stop_after=k)
+                rg, _hg = self._run(t, wd, stop_after=k)
                 assert rg.status == "interrupted", f"step{k} 未按预期中断: {rg.status}"
                 if want_drift:
                     self._mutate_workspace(wd, k)
@@ -274,7 +274,8 @@ class EvalRunner:
         # 共 10 个场景:5 个漂移 + 5 个无漂移,全部识别正确 => 100%
         accuracy = (drift_detected + clean_correct) / 10
         return {"ok": accuracy >= 1.0,
-                "summary": f"漂移识别准确率 {accuracy:.0%}({drift_detected}/5 漂移检出, {clean_correct}/5 无漂移正确)",
+                "summary": (f"漂移识别准确率 {accuracy:.0%}"
+                            f"({drift_detected}/5 漂移检出, {clean_correct}/5 无漂移正确)"),
                 "details": details, "scenarios": scenarios, "accuracy": accuracy}
 
     @staticmethod

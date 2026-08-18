@@ -8,7 +8,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Optional
+from typing import Any
 
 
 # --------------------------------------------------------------------------
@@ -19,9 +19,9 @@ class Message:
     """一条对话消息。role ∈ {system, user, assistant, tool}。"""
     role: str
     content: str
-    name: Optional[str] = None          # role == "tool" 时的工具名
-    tool_call_id: Optional[str] = None  # role == "tool" 时对应调用 ID
-    tool_calls: Optional[list[dict]] = None  # assistant 发起的工具调用(OpenAI 风格)
+    name: str | None = None          # role == "tool" 时的工具名
+    tool_call_id: str | None = None  # role == "tool" 时对应调用 ID
+    tool_calls: list[dict] | None = None  # assistant 发起的工具调用(OpenAI 风格)
     meta: dict = field(default_factory=dict)
 
     def to_openai(self) -> dict:
@@ -48,8 +48,8 @@ class ToolCall:
     name: str
     arguments: dict
     status: str = "pending"     # pending | ok | error | denied | skipped
-    output: Optional[str] = None
-    error: Optional[str] = None
+    output: str | None = None
+    error: str | None = None
     meta: dict = field(default_factory=dict)  # cache_hit / redacted / danger / ...
 
 
@@ -57,7 +57,7 @@ class ToolCall:
 class Step:
     """Harness 的一步(一轮 模型→工具 往返)。"""
     index: int
-    assistant: Optional[Message] = None
+    assistant: Message | None = None
     tool_calls: list[ToolCall] = field(default_factory=list)
     prompt_tokens: int = 0       # 本轮实际送入模型的 prompt token 数(裁剪后)
     prompt_before_tokens: int = 0  # 裁剪前 token 数(评测压缩率用)
@@ -72,7 +72,7 @@ class TaskInput:
     task_id: str
     goal: str
     files_hint: list[str] = field(default_factory=list)   # 任务相关文件的提示
-    follow_up_of: Optional[str] = None                    # follow-up 的父任务 ID
+    follow_up_of: str | None = None                    # follow-up 的父任务 ID
     extra: dict = field(default_factory=dict)             # 自由扩展(评测断言等)
 
 
@@ -84,5 +84,5 @@ class RunResult:
     final_answer: str = ""
     steps: list = field(default_factory=list)
     metrics: dict = field(default_factory=dict)
-    drift: Optional[dict] = None    # resume 场景下的漂移报告
-    error: Optional[str] = None
+    drift: dict | None = None    # resume 场景下的漂移报告
+    error: str | None = None

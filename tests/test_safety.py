@@ -1,8 +1,14 @@
 """安全边界测试:参数校验 / 隔离 / HITL / 去重 / 脱敏。"""
 import pytest
 
-from mycoder.safety import (AllowAllProvider, CallbackProvider, DenyAllProvider,
-                            Redactor, SafetyGuard, validate_params)
+from mycoder.safety import (
+    AllowAllProvider,
+    CallbackProvider,
+    DenyAllProvider,
+    Redactor,
+    SafetyGuard,
+    validate_params,
+)
 from mycoder.tools import build_registry
 
 

@@ -14,7 +14,7 @@ from .base import HITL, Tool, ToolContext, ToolResult
 class ShellExecTool(Tool):
     name = "shell_exec"
     description = "在工作区内执行一条只读/低风险 shell 命令(白名单+黑名单+人工审批三重管控)。"
-    parameters = {
+    parameters = {  # noqa: RUF012 - 类级 schema 常量(非实例可变状态)
         "type": "object",
         "properties": {
             "command": {"type": "string", "description": "要执行的命令"},
@@ -39,7 +39,7 @@ class ShellExecTool(Tool):
             )
         except subprocess.TimeoutExpired:
             return ToolResult(ok=False, error=f"命令超时(>{timeout}s)被终止")
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             return ToolResult(ok=False, error=f"命令执行失败: {e}")
 
         out = (proc.stdout or "") + (("\n[stderr]\n" + proc.stderr) if proc.stderr else "")

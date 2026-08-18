@@ -11,7 +11,7 @@ from .base import SAFE, Tool, ToolContext, ToolResult
 class MemoryQueryTool(Tool):
     name = "memory_query"
     description = "查询结构化记忆(任务摘要/文件摘要/关联记忆),返回相关片段,避免重复读取文件。"
-    parameters = {
+    parameters = {  # noqa: RUF012 - 类级 schema 常量(非实例可变状态)
         "type": "object",
         "properties": {
             "query": {"type": "string", "description": "查询关键词或任务 ID"},

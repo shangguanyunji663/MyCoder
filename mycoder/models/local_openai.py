@@ -57,10 +57,11 @@ class LocalOpenAIBackend(ModelBackend):
         except urllib.error.HTTPError as e:
             try:
                 error_body = e.read().decode("utf-8")
-            except:
+            except (OSError, UnicodeDecodeError):
                 error_body = "(could not read error body)"
             raise ConnectionError(
-                f"无法连接本地模型服务 {url}。请确认本地 OpenAI 兼容服务已启动。原始错误: {e}"
+                f"无法连接本地模型服务 {url}。请确认本地 OpenAI 兼容服务已启动。"
+                f"原始错误: {e}({error_body})"
             ) from e
         except urllib.error.URLError as e:
             raise ConnectionError(
@@ -75,7 +76,7 @@ class LocalOpenAIBackend(ModelBackend):
         msg = choice.get("message") or {}
         content = msg.get("content") or ""
         raw_calls = msg.get("tool_calls") or []
-        tool_calls = []
+        tool_calls: list[dict[str, Any]] = []
         for tc in raw_calls:
             fn = tc.get("function") or {}
             # 保留 arguments 为 JSON 字符串格式（OpenAI 兼容格式要求）

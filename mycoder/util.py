@@ -75,4 +75,4 @@ def truncate(text: str, max_chars: int, head_ratio: float = 0.6) -> str:
     tail = max_chars - head - 30
     if tail < 0:
         return text[:max_chars]
-    return text[:head] + "\n…[截断 {} 字符]…\n".format(len(text) - max_chars) + text[-tail:]
+    return text[:head] + f"\n…[截断 {len(text) - max_chars} 字符]…\n" + text[-tail:]

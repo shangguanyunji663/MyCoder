@@ -7,7 +7,6 @@
 from __future__ import annotations
 
 import re
-from typing import Any
 
 from ..util import sha256_file, truncate
 from .base import SAFE, WARN, Tool, ToolContext, ToolResult
@@ -16,7 +15,7 @@ from .base import SAFE, WARN, Tool, ToolContext, ToolResult
 class ReadFileTool(Tool):
     name = "file_read"
     description = "读取工作区内文本文件内容(可用 offset/limit 分页),返回内容与文件哈希。"
-    parameters = {
+    parameters = {  # noqa: RUF012 - 类级 schema 常量(非实例可变状态)
         "type": "object",
         "properties": {
             "path": {"type": "string", "description": "相对工作区的文件路径"},
@@ -50,8 +49,9 @@ class ReadFileTool(Tool):
 
 class WriteFileTool(Tool):
     name = "file_write"
-    description = "在工作区内创建或覆盖文件(content 为完整新内容)。覆盖已存在文件属于状态变更,按告警级别处理。"
-    parameters = {
+    description = ("在工作区内创建或覆盖文件(content 为完整新内容)。"
+                   "覆盖已存在文件属于状态变更,按告警级别处理。")
+    parameters = {  # noqa: RUF012 - 类级 schema 常量(非实例可变状态)
         "type": "object",
         "properties": {
             "path": {"type": "string", "description": "相对工作区的文件路径"},
@@ -72,7 +72,7 @@ class WriteFileTool(Tool):
 class EditFileTool(Tool):
     name = "file_edit"
     description = "在工作区内对文件做针对性字符串替换(old_string -> new_string),避免整文件覆盖。"
-    parameters = {
+    parameters = {  # noqa: RUF012 - 类级 schema 常量(非实例可变状态)
         "type": "object",
         "properties": {
             "path": {"type": "string", "description": "相对工作区的文件路径"},
@@ -98,7 +98,8 @@ class EditFileTool(Tool):
                 ok=False,
                 error=f"待替换串出现 {count} 次,非唯一;请加长 old_string 或设置 replace_all=true",
             )
-        text = text.replace(old_string, new_string) if replace_all else text.replace(old_string, new_string, 1)
+        text = text.replace(old_string, new_string, 1) if not replace_all \
+            else text.replace(old_string, new_string)
         ctx.workspace.write_text(path, text)
         return ToolResult(
             output=f"已替换 {count} 处 → {ctx.workspace.rel(p)}",
@@ -109,7 +110,7 @@ class EditFileTool(Tool):
 class ListFilesTool(Tool):
     name = "file_list"
     description = "按 glob 模式列出工作区文件(相对路径),排除隐藏目录与缓存。"
-    parameters = {
+    parameters = {  # noqa: RUF012 - 类级 schema 常量(非实例可变状态)
         "type": "object",
         "properties": {
             "pattern": {"type": "string", "description": "glob 模式,如 *.py 或 **/*.md,默认 *"},
@@ -128,7 +129,7 @@ class ListFilesTool(Tool):
 class GrepTool(Tool):
     name = "grep_search"
     description = "在工作区内正则搜索文件内容,返回 文件:行号:内容 列表。"
-    parameters = {
+    parameters = {  # noqa: RUF012 - 类级 schema 常量(非实例可变状态)
         "type": "object",
         "properties": {
             "pattern": {"type": "string", "description": "正则表达式"},
@@ -153,7 +154,8 @@ class GrepTool(Tool):
             if not f.is_file():
                 continue
             rel = str(f.relative_to(ctx.workspace.root))
-            if any(part.startswith(".") or part == "__pycache__" for part in f.relative_to(ctx.workspace.root).parts):
+            parts = f.relative_to(ctx.workspace.root).parts
+            if any(part.startswith(".") or part == "__pycache__" for part in parts):
                 continue
             if include and not f.match(include):
                 continue

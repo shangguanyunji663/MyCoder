@@ -12,7 +12,6 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import Any
 
 from ..util import ensure_dir, sha256_file
 
@@ -42,7 +41,7 @@ class Workspace:
         try:
             common = os.path.commonpath([str(self.root), str(candidate)])
         except ValueError:
-            raise PathEscapeError(f"路径逃逸被拦截: {path}")
+            raise PathEscapeError(f"路径逃逸被拦截: {path}") from None
         if common != str(self.root):
             raise PathEscapeError(f"路径逃逸被拦截(超出工作区): {path}")
         return candidate
@@ -55,7 +54,7 @@ class Workspace:
             try:
                 common = os.path.commonpath([str(self.root), str(candidate)])
             except ValueError:
-                raise PathEscapeError(f"路径逃逸被拦截: {path}")
+                raise PathEscapeError(f"路径逃逸被拦截: {path}") from None
             if common != str(self.root):
                 raise PathEscapeError(f"路径逃逸被拦截(超出工作区): {path}")
             return str(candidate.relative_to(self.root))
@@ -101,7 +100,6 @@ class Workspace:
 
     def list_files(self, pattern: str = "*") -> list[str]:
         """glob 列出文件(相对路径,排除隐藏/缓存)。"""
-        from pathlib import PurePosixPath
 
         results: set[str] = set()
         for f in self.root.rglob(pattern):

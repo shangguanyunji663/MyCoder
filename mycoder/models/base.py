@@ -8,7 +8,6 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Any
 
 
 @dataclass
@@ -38,8 +37,9 @@ class ModelBackend(ABC):
         """可 checkpoint 的后端状态(如脚本化后端的游标),默认空。"""
         return {}
 
-    def load_state(self, state: dict) -> None:
-        """恢复后端状态(Resume 用),默认无操作。"""
+    def load_state(self, state: dict) -> None:  # noqa: B027
+        """恢复后端状态(Resume 用),默认无操作。子类按需覆盖。"""
+        pass
 
     def tokenize_len(self, text: str) -> int:
         """粗粒度 token 估算,供后端记录 usage(重估策略见 context.tokens)。"""

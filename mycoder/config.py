@@ -93,7 +93,7 @@ class Config:
         self._data: dict[str, Any] = _deep_merge(DEFAULT, data or {})
 
     @classmethod
-    def load(cls, path: str | Path | None) -> "Config":
+    def load(cls, path: str | Path | None) -> Config:
         """从文件加载;path 不存在时返回默认配置。"""
         if not path:
             return cls()

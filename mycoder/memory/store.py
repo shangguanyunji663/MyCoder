@@ -13,13 +13,15 @@ from __future__ import annotations
 
 import json
 import re
-from dataclasses import dataclass, field, asdict
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
 
-from ..util import atomic_write, ensure_dir, json_dump, now_iso, sha256_text, truncate
+from ..util import ensure_dir, json_dump, now_iso, sha256_text, truncate
 
 _SYMBOL_RE = re.compile(r"^\s*(def |class |async def |import |from )")
+
+RelationsDict = dict[str, dict[str, Any]]
 
 
 def summarize_file_content(content: str, max_chars: int = 600) -> tuple[str, list[str]]:
@@ -68,7 +70,7 @@ class StructuredMemory:
         self.tasks: dict[str, TaskRecord] = {}
         self.files: dict[str, FileRecord] = {}
         # 关联:task->files, task->parent
-        self.relations: dict[str, list] = {"task_files": {}, "task_parent": {}}
+        self.relations: RelationsDict = {"task_files": {}, "task_parent": {}}
         if enabled and load:
             self.load()
 
@@ -180,10 +182,10 @@ class StructuredMemory:
                     parts.append(f"[任务] {tid} 状态={rec.status}\n  目标: {truncate(rec.goal, 200)}"
                                  f"\n  结论: {truncate(rec.summary, 200)}\n  关联文件: {files}")
         if kind in ("file", "all"):
-            for path, rec in self.files.items():
-                if q in path.lower() or q in rec.summary.lower():
-                    sym = ", ".join(rec.symbols[:12]) or "(无符号)"
-                    parts.append(f"[文件] {path}\n  摘要: {truncate(rec.summary, 200)}\n  符号: {sym}")
+            for path, frec in self.files.items():
+                if q in path.lower() or q in frec.summary.lower():
+                    sym = ", ".join(frec.symbols[:12]) or "(无符号)"
+                    parts.append(f"[文件] {path}\n  摘要: {truncate(frec.summary, 200)}\n  符号: {sym}")
         if kind in ("relation", "all"):
             for tid, files in self.relations["task_files"].items():
                 if q in tid.lower() or any(q in f.lower() for f in files):
@@ -235,12 +237,15 @@ class StructuredMemory:
         try:
             loaded = json.loads(_read("relations.json"))
             # 归一化:保证三层结构键始终存在,避免旧文件缺键导致 KeyError
-            self.relations = {
-                "task_files": loaded.get("task_files", {}) if isinstance(loaded, dict) else {},
-                "task_parent": loaded.get("task_parent", {}) if isinstance(loaded, dict) else {},
-            }
+            if isinstance(loaded, dict):
+                self.relations["task_files"] = loaded.get("task_files", {})
+                self.relations["task_parent"] = loaded.get("task_parent", {})
+            else:
+                self.relations["task_files"] = {}
+                self.relations["task_parent"] = {}
         except Exception:
-            self.relations = {"task_files": {}, "task_parent": {}}
+            self.relations["task_files"] = {}
+            self.relations["task_parent"] = {}
 
     def stats(self) -> dict:
         return {"tasks": len(self.tasks), "files": len(self.files),

@@ -13,8 +13,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Any
-
+from typing import Any, ClassVar
 
 # 危险等级:决定 HITL 是否需要人工审批
 SAFE = "safe"     # 只读,无需审批
@@ -47,7 +46,7 @@ class ToolContext:
 class Tool(ABC):
     name: str = "tool"
     description: str = ""
-    parameters: dict = {"type": "object", "properties": {}, "required": []}
+    parameters: ClassVar[dict] = {"type": "object", "properties": {}, "required": []}
     danger: str = SAFE
 
     def as_openai_schema(self) -> dict:
