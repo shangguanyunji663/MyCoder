@@ -127,6 +127,13 @@ class SafetyGuard:
         return {"allow": AllowAllProvider(), "deny": DenyAllProvider(),
                 "prompt": PromptProvider()}.get(policy, PromptProvider())
 
+    def approve(self, action: dict) -> bool:
+        """公有审批入口:委托给当前 ApprovalProvider,拒绝时计入 denied 指标。"""
+        ok = self._approver.approve(action)
+        if not ok:
+            self.denied += 1
+        return ok
+
     # ------------------------------------------------------------------
     def check(self, tool: Tool, params: dict) -> GuardResult:
         # 1. 参数校验

@@ -70,7 +70,7 @@ DEFAULT: dict[str, Any] = {
         "allow_write_outside_ext": [],
     },
     "artifacts": {"root": ".mycoder/artifacts", "redact_artifacts": True},
-    "logging": {"level": "INFO", "file": ".mycoder/harness.log"},
+    "logging": {"level": "INFO", "file": ".mycoder/harness.log", "console": True},
     "api": {"host": "127.0.0.1", "port": 8910},
 }
 

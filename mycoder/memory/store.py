@@ -11,6 +11,7 @@
 """
 from __future__ import annotations
 
+import json
 import re
 from dataclasses import dataclass, field, asdict
 from pathlib import Path
@@ -221,7 +222,6 @@ class StructuredMemory:
             p = self.root / name
             return p.read_text(encoding="utf-8") if p.exists() else "{}"
 
-        import json
         try:
             tasks = json.loads(_read("tasks.json"))
             self.tasks = {k: TaskRecord(**v) for k, v in tasks.items()}

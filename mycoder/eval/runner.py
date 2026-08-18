@@ -136,14 +136,17 @@ class EvalRunner:
         for f in exp.get("files_created", []):
             p = harness.workspace.resolve(f)
             if not p.exists():
-                ok, _ = False, msgs.append(f"文件未创建: {f}")
+                ok = False
+                msgs.append(f"文件未创建: {f}")
         for f, sub in (exp.get("file_contains") or {}).items():
             content = harness.workspace.read_text(f) or ""
             if sub not in content:
-                ok, _ = False, msgs.append(f"文件内容不含 {sub!r}: {f}")
+                ok = False
+                msgs.append(f"文件内容不含 {sub!r}: {f}")
         fc = exp.get("final_contains")
         if fc and fc not in result.final_answer:
-            ok, _ = False, msgs.append(f"终答不含 {fc!r}")
+            ok = False
+            msgs.append(f"终答不含 {fc!r}")
         if result.status != "completed":
             ok, _ = False, msgs.append(f"状态非 completed: {result.status}")
         return ok, msgs

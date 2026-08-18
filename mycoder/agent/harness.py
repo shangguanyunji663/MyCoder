@@ -70,11 +70,11 @@ def get_logger(config: Config) -> logging.Logger:
     logger = logging.getLogger("mycoder")
     logger.setLevel(config.get("logging.level", "INFO"))
     if not logger.handlers:
-        fh = logging.FileHandler(config.get("logging.file", ".mycoder/harness.log"),
-                                 encoding="utf-8")
-        fh.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(message)s"))
-        logger.addHandler(fh)
-        if config.get("logging.file") is None or True:  # 同时输出控制台,便于本地观察
+        if config.get("logging.file"):
+            fh = logging.FileHandler(config.get("logging.file"), encoding="utf-8")
+            fh.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(message)s"))
+            logger.addHandler(fh)
+        if config.get("logging.console", True):  # 同时输出控制台,便于本地观察
             import sys
             sh = logging.StreamHandler(sys.stderr)
             sh.setFormatter(logging.Formatter("[%(levelname)s] %(message)s"))
@@ -117,7 +117,6 @@ class AgentHarness:
         backend = backend or create_backend(config)
         ws_root = workspace_root or config.get("workspace.root", ".")
         ws = Workspace(ws_root, config.get("workspace.allow_absolute", False))
-        registry = ToolRegistry()
         from ..tools import build_registry
         registry = build_registry()
         memory = StructuredMemory(memory_root or config.get("memory.root", ".mycoder/memory"),
@@ -321,9 +320,8 @@ class AgentHarness:
             meta.update(status="denied", error=gr.reason)
             return f"[已拦截] {gr.reason}", meta
         if gr.needs_approval:
-            if not self.guard._approver.approve(gr.action):
+            if not self.guard.approve(gr.action):
                 meta.update(status="denied", error="人工审批未通过")
-                self.guard.denied += 1
                 return "[已拦截] 人工审批未通过(高风险操作)", meta
             meta["hitl_approved"] = True
         # 去重短路

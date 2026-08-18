@@ -28,15 +28,17 @@ def _build_config(args) -> Config:
         cfg.set("safety.hitl_policy", args.hitl_policy)
     if getattr(args, "workspace", None):
         cfg.set("workspace.root", args.workspace)
+    if getattr(args, "backend", None):
+        cfg.set("model.backend", args.backend)
     return cfg
 
 
-def _make_backend(args, task_data: dict):
+def _make_backend(cfg: Config, task_data: dict):
     """优先用任务文件里的 script 构造 mock;否则按 config 后端装配。"""
     if task_data.get("script"):
         return MockBackend(script=task_data["script"],
                            default_answer=task_data.get("answer", "任务已完成。"))
-    return create_backend(_build_config(args))
+    return create_backend(cfg)
 
 
 def cmd_run(args) -> int:
@@ -45,8 +47,7 @@ def cmd_run(args) -> int:
 
     cfg = _build_config(args)
     data = load_task_file(args.task_file)
-    backend = MockBackend(script=data.get("script", []),
-                          default_answer=data.get("answer", "任务已完成。"))
+    backend = _make_backend(cfg, data)
     policy = cfg.get("safety.hitl_policy", "prompt")
     approver = {"allow": AllowAllProvider(), "deny": DenyAllProvider()}.get(policy)
     harness = AgentHarness.build(cfg, backend=backend, approver=approver)
@@ -62,7 +63,7 @@ def cmd_run(args) -> int:
     print(json.dumps({"task_id": result.task_id, "status": result.status,
                       "metrics": result.metrics,
                       "final_answer": result.final_answer,
-                      "artifacts": result.metrics and None},
+                      "artifacts_dir": str(harness.artifacts.task_dir(result.task_id))},
                      ensure_ascii=False, indent=2))
     return 0 if result.status == "completed" else 1
 
@@ -147,11 +148,14 @@ def main(argv=None) -> int:
     r.add_argument("--config", help="配置文件")
     r.add_argument("--workspace", help="覆盖工作区根目录")
     r.add_argument("--hitl-policy", choices=["prompt", "allow", "deny"], help="审批策略")
+    r.add_argument("--backend", choices=["mock", "local_openai"],
+                   help="覆盖 model.backend(任务文件带 script 时仍优先用 mock)")
     r.set_defaults(func=cmd_run)
 
     rs = sub.add_parser("resume", help="从断点恢复")
     rs.add_argument("--task-id", required=True)
     rs.add_argument("--config")
+    rs.add_argument("--backend", choices=["mock", "local_openai"], help="覆盖 model.backend")
     rs.set_defaults(func=cmd_resume)
 
     s = sub.add_parser("serve", help="启动 localhost HTTP API")

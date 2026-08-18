@@ -147,45 +147,42 @@ mycoder/
 ### 安装依赖
 
 ```bash
-# 使用 ML2 环境(已预装 pytest)
-conda activate ML2
-
-# 安装项目依赖
-cd "D:\DeepSeek Harness\mycoder"
-pip install -r requirements.txt
+# 在项目根目录安装依赖(建议使用虚拟环境)
+cd mycoder
+python -m pip install -r requirements.txt
 ```
 
 ### 运行 Demo
 
 ```bash
 # 综合 Demo
-& "D:\ANACONDA\envs\ML2\python.exe" examples/demo.py
+python examples/demo.py
 
 # 上下文治理 Demo (模拟 15 轮上下文膨胀)
-& "D:\ANACONDA\envs\ML2\python.exe" examples/context_demo.py
+python examples/context_demo.py
 
 # 查看折叠后消息
-& "D:\ANACONDA\envs\ML2\python.exe" examples/show_folded.py
+python examples/show_folded.py
 ```
 
 ### 运行测试
 
 ```bash
 # 完整测试套件(单元 + 性能)
-& "D:\ANACONDA\envs\ML2\python.exe" -m pytest tests/ -v
+python -m pytest tests/ -v
 
 # 仅运行性能测试
-& "D:\ANACONDA\envs\ML2\python.exe" -m pytest tests/test_performance.py -v
+python -m pytest tests/test_performance.py -v
 
 # 仅运行特定层测试
-& "D:\ANACONDA\envs\ML2\python.exe" -m pytest tests/test_eval.py::TestEvalLayers -v
+python -m pytest tests/test_eval.py::TestEvalLayers -v
 ```
 
 ### 运行评测
 
 ```bash
 # 运行四层评测
-& "D:\ANACONDA\envs\ML2\python.exe" -m mycoder eval --suite all --output .mycoder/eval
+python -m mycoder eval --suite all --output .mycoder/eval
 
 # 查看评测报告
 cat .mycoder/eval/report.md
@@ -195,7 +192,7 @@ cat .mycoder/eval/report.md
 
 ```bash
 # 启动 HTTP API 服务(127.0.0.1:8910)
-& "D:\ANACONDA\envs\ML2\python.exe" -m mycoder serve --host 127.0.0.1 --port 8910
+python -m mycoder serve --host 127.0.0.1 --port 8910
 
 # 测试 API
 curl http://127.0.0.1:8910/health

@@ -28,6 +28,12 @@ class LocalOpenAIBackend(ModelBackend):
         self.timeout_seconds = timeout_seconds
 
     # ------------------------------------------------------------------
+    def _chat_url(self) -> str:
+        """端点解析:base_url 已指向 chat/completions 则原样使用,否则补齐路径。"""
+        if self.base_url.endswith("/chat/completions"):
+            return self.base_url
+        return self.base_url + "/chat/completions"
+
     def complete(self, messages: list, tools: list[dict] | None = None,
                  temperature: float | None = None) -> ModelResponse:
         payload: dict[str, Any] = {
@@ -38,12 +44,7 @@ class LocalOpenAIBackend(ModelBackend):
         if tools:
             payload["tools"] = tools_to_openai(tools)
 
-        url = self.base_url + ("/chat/completions" if not self.base_url.endswith("/chat/completions")
-                               and not self.base_url.endswith("/v1") else "")
-        # 兼容:若用户填的是 .../v1,补 /chat/completions
-        if self.base_url.endswith("/v1") or "/completions" not in url:
-            if not url.endswith("/chat/completions"):
-                url = self.base_url.rstrip("/") + "/chat/completions"
+        url = self._chat_url()
 
         data = json.dumps(payload).encode("utf-8")
         req = urllib.request.Request(url, data=data, method="POST")

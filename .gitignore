@@ -25,3 +25,5 @@ venv/
 # 测试临时目录
 tests/_workspace*/
 /tmp/
+# ZCode session artifacts
+.zcode/
