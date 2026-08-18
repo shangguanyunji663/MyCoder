@@ -52,6 +52,11 @@ DEFAULT: dict[str, Any] = {
         "root": ".mycoder/memory",
         "auto_remember_files": True,
         "followup_inject_summaries": True,
+        "retrieval": {
+            "mode": "substring",  # substring(默认,向后兼容) | vector | hybrid
+            "alpha": 0.5,         # hybrid 中向量权重
+            "embedder": "hashing",  # hashing(零依赖默认) | fastembed(可选)
+        },
     },
     "checkpoint": {
         "enabled": True,
@@ -77,8 +82,12 @@ DEFAULT: dict[str, Any] = {
         "allow_write_outside_ext": [],
     },
     "artifacts": {"root": ".mycoder/artifacts", "redact_artifacts": True},
-    "logging": {"level": "INFO", "file": ".mycoder/harness.log", "console": True},
+    "logging": {"level": "INFO", "file": ".mycoder/harness.log", "console": True,
+                "format": "text"},  # text | json(结构化 JSON 日志,逐行)
+    "observability": {"enabled": True},  # 链路追踪 trace.json(零依赖,可选 OTel 桥接)
     "api": {"host": "127.0.0.1", "port": 8910},
+    # 子代理编排:默认关闭;显式调用 Orchestrator 时才生效(max_workers 控制并行度)
+    "agent": {"orchestrator": {"enabled": False, "max_workers": 4}},
 }
 
 

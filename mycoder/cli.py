@@ -1,13 +1,14 @@
 """命令行入口:python -m mycoder <command>。
 
 子命令:
-  run       运行一个任务(本地,默认 mock 后端)
-  resume    从断点恢复一个任务
-  serve     启动 localhost HTTP API(127.0.0.1:{port})
-  eval      运行四层评测(h regression | context | memory | resume | all)
-  benchmark 列出内置 benchmark 任务
-  artifacts 查看/聚合某任务的运行工件
-  doctor    打印环境诊断(帮助新手确认配置与依赖)
+  run         运行一个任务(本地,默认 mock 后端)
+  resume      从断点恢复一个任务
+  serve       启动 localhost HTTP API(127.0.0.1:{port},--impl stdlib|fastapi)
+  orchestrate 把复杂目标分解为子任务并行编排执行
+  eval        运行评测(h regression | context | memory | resume | retrieval | all)
+  benchmark   列出内置 benchmark 任务
+  artifacts   查看/聚合某任务的运行工件
+  doctor      打印环境诊断(帮助新手确认配置与依赖)
 """
 from __future__ import annotations
 
@@ -80,13 +81,35 @@ def cmd_resume(args) -> int:
 
 
 def cmd_serve(args) -> int:
-    from .api.server import run_server
+    from .api import run_server
     cfg = _build_config(args)
     host = args.host or cfg.get("api.host", "127.0.0.1")
     port = args.port or int(cfg.get("api.port", 8910))
-    print(f"MyCoder API 启动: http://{host}:{port}/health")
-    run_server(cfg, host=host, port=port)
+    print(f"MyCoder API 启动(impl={getattr(args, 'impl', 'stdlib')}): http://{host}:{port}/health")
+    run_server(cfg, host=host, port=port, impl=getattr(args, "impl", "stdlib"))
     return 0
+
+
+def cmd_orchestrate(args) -> int:
+    from .agent import Orchestrator
+
+    cfg = _build_config(args)
+    if getattr(args, "max_workers", None):
+        cfg.set("agent.orchestrator.max_workers", args.max_workers)
+
+    def backend_factory(sub):
+        # 每个子任务按其配置装配后端(任务文件无 script 时走真实/配置后端)
+        return create_backend(cfg)
+
+    orch = Orchestrator(
+        cfg,
+        backend_factory=backend_factory,
+        max_workers=cfg.get("agent.orchestrator.max_workers", 4),
+    )
+    result = orch.run(args.goal, task_id=getattr(args, "task_id", None))
+    print(json.dumps(result, ensure_ascii=False, indent=2, default=str))
+    failed = (result.get("summary") or {}).get("failed", 0)
+    return 0 if failed == 0 else 1
 
 
 def cmd_eval(args) -> int:
@@ -162,10 +185,12 @@ def main(argv=None) -> int:
     s.add_argument("--config")
     s.add_argument("--host", default=None)
     s.add_argument("--port", type=int, default=None)
+    s.add_argument("--impl", choices=["stdlib", "fastapi"], default="stdlib",
+                   help="HTTP 实现:stdlib(零依赖) 或 fastapi(SSE 实时追踪)")
     s.set_defaults(func=cmd_serve)
 
     e = sub.add_parser("eval", help="运行评测")
-    e.add_argument("--suite", choices=["all", "regression", "context", "memory", "resume"], default="all")
+    e.add_argument("--suite", choices=["all", "regression", "context", "memory", "resume", "retrieval"], default="all")
     e.add_argument("--output", default=".mycoder/eval")
     e.add_argument("--benchmarks", default=None)
     e.add_argument("--config")
@@ -183,6 +208,18 @@ def main(argv=None) -> int:
     d = sub.add_parser("doctor", help="环境诊断")
     d.add_argument("--config")
     d.set_defaults(func=cmd_doctor)
+
+    o = sub.add_parser("orchestrate", help="把复杂目标分解为子任务并行编排执行")
+    o.add_argument("--goal", required=True, help="复杂目标(将被分解为子任务)")
+    o.add_argument("--task-id", default=None, help="编排任务 ID(可选)")
+    o.add_argument("--config")
+    o.add_argument("--workspace")
+    o.add_argument("--hitl-policy", choices=["prompt", "allow", "deny"], help="审批策略")
+    o.add_argument("--backend", choices=["mock", "local_openai"],
+                   help="覆盖 model.backend(子任务共享此后端)")
+    o.add_argument("--max-workers", type=int, default=None,
+                   help="并行子任务数(默认 config agent.orchestrator.max_workers)")
+    o.set_defaults(func=cmd_orchestrate)
 
     args = p.parse_args(argv)
     return args.func(args)

@@ -18,6 +18,8 @@ from pathlib import Path
 from typing import Any
 
 from ..util import ensure_dir, json_dump, now_iso, sha256_text, truncate
+from .vectors import (BM25, EmbeddingProvider, HashingEmbedder, HybridRetriever,
+                      VectorIndex, tokenize)
 
 _SYMBOL_RE = re.compile(r"^\s*(def |class |async def |import |from )")
 
@@ -64,13 +66,20 @@ class FileRecord:
 class StructuredMemory:
     """三层记忆的容器 + 磁盘持久化 + 检索。"""
 
-    def __init__(self, root: str | Path, enabled: bool = True, load: bool = True):
+    def __init__(self, root: str | Path, enabled: bool = True, load: bool = True,
+                 retrieval_mode: str = "substring", embedder: EmbeddingProvider | None = None,
+                 hybrid_alpha: float = 0.5):
         self.root = Path(root)
         self.enabled = enabled
         self.tasks: dict[str, TaskRecord] = {}
         self.files: dict[str, FileRecord] = {}
         # 关联:task->files, task->parent
         self.relations: RelationsDict = {"task_files": {}, "task_parent": {}}
+        # 检索模式:substring(默认,向后兼容) | vector | hybrid
+        self.retrieval_mode = retrieval_mode
+        self.embedder = embedder or HashingEmbedder()
+        self.hybrid_alpha = hybrid_alpha
+        self._retrievers: dict[str, HybridRetriever] = {}  # 按 kind 缓存
         if enabled and load:
             self.load()
 
@@ -170,9 +179,101 @@ class StructuredMemory:
         return self.relations.get("task_parent", {}).get(task_id)
 
     # ------------------------------------------------------------------
-    # 检索 / follow-up 上下文
-    def search(self, query: str, kind: str = "all") -> str:
-        """面向 memory_query 工具的检索接口,返回可读文本片段。"""
+    # 检索 / follow-up 上下文(检索实现见下方 search / rank / _search_substring_legacy)
+    def followup_context(self, task_id: str | None = None,
+                         parent_task_id: str | None = None, max_files: int = 12) -> str:
+        """生成注入 follow-up 任务的记忆块(任务摘要 + 文件摘要)。"""
+        blocks: list[str] = ["# 结构化记忆(来自之前的任务)"]
+        pid = parent_task_id or (self.parent_of(task_id) if task_id else None)
+        if pid and pid in self.tasks:
+            t = self.tasks[pid]
+            blocks.append(f"- 父任务 {pid}: {truncate(t.summary or t.goal, 200)}")
+            for f in self.relations["task_files"].get(pid, [])[:max_files]:
+                rec = self.files.get(f)
+                if rec:
+                    blocks.append(f"- 文件 {f}: {truncate(rec.summary, 160)}")
+        return "\n".join(blocks)
+
+    # ------------------------------------------------------------------
+    # 检索(子串 / 向量 / 混合)
+    def _corpus_map(self, kind: str = "all") -> dict[str, dict]:
+        """把三层记忆编译为 {doc_id: {kind, text, record}},供检索打分。"""
+        docs: dict[str, dict] = {}
+        if kind in ("task", "all"):
+            for tid, rec in self.tasks.items():
+                text = f"{tid} {rec.goal} {rec.summary} {' '.join(rec.key_decisions)}"
+                docs[f"task:{tid}"] = {"kind": "task", "text": text, "record": rec}
+        if kind in ("file", "all"):
+            for path, frec in self.files.items():
+                text = f"{path} {frec.summary} {' '.join(frec.symbols)}"
+                docs[f"file:{path}"] = {"kind": "file", "text": text, "record": frec}
+        return docs
+
+    def _build_retriever(self, kind: str) -> HybridRetriever:
+        if kind not in self._retrievers:
+            docs = self._corpus_map(kind)
+            index = VectorIndex(self.embedder)
+            bm25 = BM25()
+            for doc_id, d in docs.items():
+                index.add(doc_id, d["text"])
+                bm25.add(doc_id, tokenize(d["text"]))
+            self._retrievers[kind] = HybridRetriever(index, bm25, self.embedder,
+                                                     alpha=self.hybrid_alpha)
+        return self._retrievers[kind]
+
+    def rank(self, query: str, mode: str | None = None, top_k: int = 5,
+             kind: str = "all") -> list[tuple[str, float]]:
+        """返回 [(doc_id, score)] 降序。mode 默认取 self.retrieval_mode。
+
+        - substring:查询作为子串命中得 1.0 分(向后兼容原语义);
+        - vector   :仅稠密余弦;
+        - hybrid   :α·cosine + (1-α)·bm25。
+        """
+        mode = mode or self.retrieval_mode
+        docs = self._corpus_map(kind)
+        if not docs:
+            return []
+        if mode == "substring":
+            scored = [(did, 1.0) for did, d in docs.items()
+                      if query.lower() in d["text"].lower()]
+            scored.sort(key=lambda x: x[1], reverse=True)
+            return scored[:top_k]
+        retriever = self._build_retriever(kind)
+        if mode == "vector":
+            q_vec = self.embedder.embed(query)
+            return retriever.index.search(q_vec, top_k)
+        # hybrid
+        return retriever.rank(query, top_k)
+
+    def _format_doc(self, doc: dict) -> str:
+        rec = doc["record"]
+        if doc["kind"] == "task":
+            t = rec
+            files = ", ".join(t.files) or "(无)"
+            return (f"[任务] {t.task_id} 状态={t.status}\n  目标: {truncate(t.goal, 200)}"
+                    f"\n  结论: {truncate(t.summary, 200)}\n  关联文件: {files}")
+        f = rec
+        sym = ", ".join(f.symbols[:12]) or "(无符号)"
+        return f"[文件] {f.path}\n  摘要: {truncate(f.summary, 200)}\n  符号: {sym}"
+
+    def search(self, query: str, kind: str = "all", mode: str | None = None) -> str:
+        """面向 memory_query 工具的检索接口,返回可读文本片段。
+
+        与原实现向后兼容:默认 substring 模式输出格式一致;开启 vector/hybrid
+        后按相关度排序返回同样的块结构。
+        """
+        if mode is None:
+            mode = self.retrieval_mode
+        if mode == "substring" and not self._retrievers:
+            # 向后兼容:沿用原逐条子串匹配输出格式(含 relation 层)
+            return self._search_substring_legacy(query, kind)
+        ranked = self.rank(query, mode=mode, top_k=5, kind=kind)
+        docs = self._corpus_map(kind)
+        blocks = [self._format_doc(docs[did]) for did, _ in ranked if did in docs]
+        return "\n\n".join(blocks)
+
+    def _search_substring_legacy(self, query: str, kind: str = "all") -> str:
+        """原版子串匹配(relation 层也参与),仅在默认 substring 且未启用向量时。"""
         parts: list[str] = []
         q = query.lower()
         if kind in ("task", "all"):
@@ -194,20 +295,6 @@ class StructuredMemory:
                 if q in tid.lower() or q in str(parent).lower():
                     parts.append(f"[关联] follow-up {tid} -> 父任务 {parent}")
         return "\n\n".join(parts)
-
-    def followup_context(self, task_id: str | None = None,
-                         parent_task_id: str | None = None, max_files: int = 12) -> str:
-        """生成注入 follow-up 任务的记忆块(任务摘要 + 文件摘要)。"""
-        blocks: list[str] = ["# 结构化记忆(来自之前的任务)"]
-        pid = parent_task_id or (self.parent_of(task_id) if task_id else None)
-        if pid and pid in self.tasks:
-            t = self.tasks[pid]
-            blocks.append(f"- 父任务 {pid}: {truncate(t.summary or t.goal, 200)}")
-            for f in self.relations["task_files"].get(pid, [])[:max_files]:
-                rec = self.files.get(f)
-                if rec:
-                    blocks.append(f"- 文件 {f}: {truncate(rec.summary, 160)}")
-        return "\n".join(blocks)
 
     # ------------------------------------------------------------------
     # 持久化

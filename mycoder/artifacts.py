@@ -9,6 +9,7 @@
 """
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -134,7 +135,7 @@ class ArtifactManager:
         paths["metrics"] = str(m)
 
         # 3. 人类可读报告
-        report = self._render_report(task_id, metrics, result)
+        report = self._render_report(task_id, metrics, result, task_dir=d)
         if self.redactor is not None:
             report = self.redactor.redact(report)
         r = d / "report.md"
@@ -148,7 +149,8 @@ class ArtifactManager:
         return paths
 
     @staticmethod
-    def _render_report(task_id: str, metrics: Metrics, result: dict) -> str:
+    def _render_report(task_id: str, metrics: Metrics, result: dict,
+                       task_dir: Path | None = None) -> str:
         m = metrics.snapshot()
         lines = [
             f"# MyCoder 运行报告 — {task_id}",
@@ -171,6 +173,26 @@ class ArtifactManager:
             f"- 沉淀文件摘要: {m['files_remembered']} / 记忆查询: {m['memory_queries']}",
             f"- 拦截动作: {m['denied_actions']} / 重复跳过: {m['skipped_repeats']}",
             "",
+            "## 耗时时间线与成本",
+        ]
+        # 从 trajectory.jsonl 重建逐步时间线(零额外存储,仅读取既有工件)
+        timeline = _build_timeline(task_dir)
+        if timeline:
+            lines.append("")
+            lines.append("| 步 | 事件 | 延迟(ms) | prompt tokens | completion tokens |")
+            lines.append("| --- | --- | ---: | ---: | ---: |")
+            for row in timeline:
+                lines.append(f"| {row['index']} | {row['kind']} | {row['latency_ms']} "
+                             f"| {row['prompt_tokens']} | {row['completion_tokens']} |")
+            lines.append("")
+            lines.append(f"- 总工具/模型调用延迟: {sum(r['latency_ms'] for r in timeline)}ms")
+        else:
+            lines.append("")
+            lines.append("> (无可用的轨迹时间线数据)")
+        if m['cost_usd'] > 0:
+            lines.append(f"- 本次运行估计成本: ${m['cost_usd']:.5f}")
+        lines += [
+            "",
             "## 最终回答",
             "",
             _quote(result.get("final_answer", "")),
@@ -181,3 +203,32 @@ class ArtifactManager:
 def _quote(text: str) -> str:
     text = (text or "").strip() or "(无)"
     return "\n".join("> " + ln for ln in text.splitlines()) if text else "> " + text
+
+
+def _build_timeline(task_dir: Path | None) -> list[dict]:
+    """从 trajectory.jsonl 重建逐步耗时时间线(零额外存储,只读既有工件)。"""
+    if task_dir is None:
+        return []
+    p = Path(task_dir) / "trajectory.jsonl"
+    if not p.exists():
+        return []
+    rows: list[dict] = []
+    try:
+        for line in p.read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            ev = json.loads(line)
+            t = ev.get("type")
+            if t == "model_call":
+                rows.append({"index": ev.get("index"), "kind": "model_call",
+                             "latency_ms": ev.get("latency_ms", 0),
+                             "prompt_tokens": ev.get("prompt_tokens", 0),
+                             "completion_tokens": ev.get("completion_tokens", 0)})
+            elif t == "tool_call":
+                rows.append({"index": ev.get("step_index"), "kind": f"tool:{ev.get('name')}",
+                             "latency_ms": ev.get("latency_ms", 0),
+                             "prompt_tokens": 0, "completion_tokens": 0})
+    except Exception:
+        return []
+    return rows

@@ -19,6 +19,12 @@
 │  │ CheckpointStore  │  │ ArtifactManager  │                     │
 │  │ (断点保存/恢复)   │  │ (工件导出)        │                     │
 │  └──────────────────┘  └──────────────────┘                     │
+│                                                                  │
+│  ┌─────────────── 横切层(对 Harness 零侵入)─────────────┐      │
+│  │ Observability(Tracer/trace.json + on_event 事件总线)  │      │
+│  │ API(fastapi_server + event_bus 的 SSE 事件流)         │      │
+│  │ Orchestrator(把目标拆为独立子 Harness 并行编排)       │      │
+│  └────────────────────────────────────────────────────────┘      │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -41,7 +47,12 @@
 - 三类运行工件:
   - trajectory.jsonl: 逐步追加的完整轨迹(崩溃可恢复)
   - checkpoint.json: 可恢复断点(任务/上下文/工作区指纹/指标)
-  - metrics.json + report.md: 聚合指标与人类可读报告
+  - metrics.json + report.md: 聚合指标与人类可读报告(含「耗时时间线与成本」小节)
+- **链路追踪**(`observability/tracing.py`):
+  - 零依赖 `Span` / `Tracer`,导出 OTLP 风格 `trace.json`(含完整 span 层级与耗时)
+  - 安装 `opentelemetry-api` 时自动桥接真实 OTel Tracer(缺失则静默降级)
+  - Harness 通过最小侵入的 `on_event` 事件总线埋点:task_start / step_start / model_call / tool_call / checkpoint / task_end
+- **结构化日志**: `logging.format: text | json`,JSON 行可被 `json.loads` 解析
 - 日志: 关键事件记录到 .mycoder/harness.log
 
 ### 4. 安全边界
@@ -129,7 +140,15 @@ RunResult + Artifacts
   - relations: {task_files, task_parent}
 - remember_file(): 内容哈希一致则跳过(去重关键)
 - followup_context(): 生成注入 follow-up 任务的记忆块
-- search(query, kind="all"): 检索记忆
+- search(query, kind="all", mode=None): 检索记忆,`mode` 可覆盖配置:
+  - `substring`(默认,向后兼容): 子串/关键词匹配
+  - `vector`: 稠密向量检索(`HashingEmbedder` 零依赖 / `FastEmbedEmbedder` 可选)
+  - `hybrid`: `score = α·cosine + (1-α)·bm25`,结合 `VectorIndex` 与纯 Python `BM25`
+- `memory/vectors.py`:
+  - `EmbeddingProvider` 接口 + `HashingEmbedder`(字符 n-gram 哈希,确定性,默认)+ `FastEmbedEmbedder`(bge-small,可选依赖)
+  - `VectorIndex`:余弦相似度 + 增量更新 + 持久化
+  - `BM25`:纯 Python 实现(词/字级分词,兼容中英文)
+  - `HybridRetriever`:稠密 + 稀疏混合打分
 
 ### CheckpointStore
 - save(task_id, snapshot): 落盘断点(JSON)
@@ -148,6 +167,29 @@ RunResult + Artifacts
 - resume(task_id): 从断点恢复
 - _execute_tools(): 安全链 + 执行 + 脱敏 + 记忆沉淀
 - _checkpoint(): 周期性/裁剪前/中断时保存断点
+- `build(config, backend, approver, on_event)`: 工厂装配;若传入 `on_event`(如 API 的 SSE EventBus),则默认 Tracer 与调用方回调**同时**收到语义事件
+
+### Observability / Tracer
+- `Tracer(artifacts_root, enabled)`: 作为 `on_event` 消费者重建 span 生命周期
+- `handle(event)`: 按事件类型 task_start / step_start / model_call / tool_call / checkpoint / task_end 维护 span 树
+- `export()`: 任务结束写出 `{artifacts_root}/{task_id}/trace.json`
+
+### API 层(fastapi_server + event_bus)
+- `TaskEventBus`: 进程内队列桥,按 `task_id` 路由语义事件;`done(task_id)` 推入 `__done__` 哨兵
+- `create_app(config)`: 构建 FastAPI 应用,路由:
+  - `POST /api/run` → 立即返回 `task_id`,后台线程执行 harness
+  - `GET /api/run/{id}` → 轮询状态 + 指标摘要
+  - `GET /api/run/{id}/events` → SSE 实时推送事件(`done` 哨兵结束)
+  - `GET /api/artifacts/{id}/{name}` → 下载工件
+  - `GET /health` / `GET /`(vanilla JS 实时追踪页)
+- 标准库 `server.py` 保持零依赖实现;`serve --impl stdlib|fastapi` 切换
+
+### Orchestrator(子代理编排)
+- `Orchestrator(config, planner, backend_factory, max_workers, on_event)`
+- `decompose(goal)`: Planner 产出子任务列表(默认确定性退化:整体作为一个子任务;可注入 LLM planner 做智能分解)
+- `run(goal)`: 各子任务由**完全独立工作区/记忆/断点/工件根**的子 `AgentHarness` 经 `ThreadPoolExecutor` 并行执行
+- 单个子任务失败标记 `failed` 不阻断整体(部分降级);汇总 `aggregate()`;产出 `orchestration.json`
+- 通过 `on_event` 发出 orchestration_start / subtask_end / orchestration_end
 
 ## 巨型测试文件
 

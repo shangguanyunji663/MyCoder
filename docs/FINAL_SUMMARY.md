@@ -6,7 +6,7 @@
 **开发语言**: Python 3.12+  
 **运行环境**: ML2 环境 (`D:\ANACONDA\envs\ML2`)  
 **测试环境**: pytest 9.0.2, Windows  
-**测试结果**: **162/162 测试用例全部通过** ✅  
+**测试结果**: **206/206 测试用例全部通过** ✅ (16 个测试文件) 
 
 ---
 
@@ -51,8 +51,9 @@ mycoder/                          # 项目根目录
 │   │   └── manager.py            # ContextManager (组装+裁剪, 三层裁剪策略)
 │   │
 │   ├── memory/                   # [模块] 结构化记忆系统
-│   │   ├── store.py              # StructuredMemory (三层存储:tasks/files/relations)
-│   │   └── retriever.py          # MemoryRetriever (检索接口)
+│   │   ├── store.py              # StructuredMemory (三层存储:tasks/files/relations, substring/vector/hybrid)
+│   │   ├── retriever.py          # MemoryRetriever (检索接口)
+│   │   └── vectors.py            # 向量检索 (HashingEmbedder/VectorIndex/BM25/HybridRetriever)
 │   │
 │   ├── checkpoint/               # [模块] 断点与恢复
 │   │   ├── store.py              # CheckpointStore (断点保存/加载)
@@ -62,31 +63,46 @@ mycoder/                          # 项目根目录
 │   │   ├── guard.py              # SafetyGuard (参数校验/工作区隔离/HITL/去重)
 │   │   └── redact.py             # Redactor (敏感信息脱敏: API Key/密码/私钥等)
 │   │
-│   ├── agent/                    # [模块] 主调度循环
-│   │   ├── harness.py            # AgentHarness (主循环 run() / resume())
+│   ├── agent/                    # [模块] 主调度循环 + 编排
+│   │   ├── harness.py            # AgentHarness (主循环 run() / resume(), on_event 埋点)
+│   │   ├── orchestrator.py       # Orchestrator (子代理并行编排, 独立子工作区)
 │   │   └── __init__.py
+│   │
+│   ├── observability/            # [模块] 可观测性 (链路追踪)
+│   │   └── tracing.py            # Span / Tracer (零依赖, OTLP 风格 trace.json + 可选 OTel 桥接)
 │   │
 │   ├── api/                      # [模块] localhost HTTP API
 │   │   ├── server.py             # HTTP 服务 (127.0.0.1:8910, 标准库 ThreadingHTTPServer)
+│   │   ├── event_bus.py          # TaskEventBus (进程内事件队列)
+│   │   ├── fastapi_server.py     # FastAPI + SSE 实现 (可选依赖)
+│   │   ├── trace_page.py         # vanilla JS 实时追踪页
 │   │   └── __init__.py
 │   │
+│   ├── cost.py                   # 按价目表核算每次运行成本
+│   │
 │   └── eval/                     # [模块] 评测审计闭环
-│       ├── benchmark.py          # Benchmark 数据加载 (12个固定任务)
+│       ├── benchmark.py          # Benchmark 数据加载 (12个固定任务 + 检索用例)
 │       ├── experiment.py         # 对照实验原语 (compare_metrics, format_delta)
-│       ├── runner.py             # EvalRunner (四层评测运行器)
+│       ├── runner.py             # EvalRunner (五层评测运行器)
 │       └── __init__.py
 │
-├── tests/                        # pytest 测试套件 (11 个测试文件, 162 个用例)
+├── tests/                        # pytest 测试套件 (16 个测试文件, 206 个用例)
 │   ├── conftest.py               # 共享 fixtures (tmp_path_factory_override, config, workspace, make_harness)
 │   ├── test_models.py            # 14 个测试用例
 │   ├── test_tools.py             # 21 个测试用例
 │   ├── test_sandbox.py           # 15 个测试用例
 │   ├── test_safety.py            # 27 个测试用例
-│   ├── test_context.py           # 15 个测试用例
+│   ├── test_context.py           # 19 个测试用例
 │   ├── test_memory.py            # 19 个测试用例
 │   ├── test_checkpoint.py        # 15 个测试用例
 │   ├── test_harness.py           # 15 个测试用例
-│   ├── test_eval.py              # 13 个测试用例
+│   ├── test_backend.py           # 9 个测试用例 (重试/退避/流式/usage)
+│   ├── test_cost.py              # 5 个测试用例 (成本核算)
+│   ├── test_eval.py              # 14 个测试用例 (五层评测)
+│   ├── test_observability.py     # 7 个测试用例 (链路追踪/JSON 日志)
+│   ├── test_vectors.py           # 11 个测试用例 (嵌入/BM25/混合检索)
+│   ├── test_api.py               # 3 个测试用例 (FastAPI SSE)
+│   ├── test_orchestrator.py      # 4 个测试用例 (并行/降级/事件)
 │   └── test_performance.py       # 8 个测试用例 (性能测试)
 │
 ├── examples/                     # 使用示例
@@ -349,7 +365,7 @@ class ApprovalProvider:
 
 ### 模块 6: 评测审计闭环体系 (eval/)
 
-**4 层评测架构**:
+**5 层评测架构**:
 
 ```
 Layer 1: Harness 回归测试
@@ -374,6 +390,11 @@ Layer 4: 恢复正确性评测
   ├─ 目标: 验证 checkpoint/resume + 漂移识别边界
   ├─ 方法: 10 场景 (stop_after=1..5 × drift/no-drift)
   └─ 通过: drift_accuracy=100%(5/5), completed=100% ✓
+
+Layer 5: 检索召回评测
+  ├─ 目标: 验证同义改写查询下 substring / vector / hybrid 的召回
+  ├─ 方法: 6 个同义改写查询, 对照 recall@1/3/5
+  └─ 通过: hybrid recall@3=100%, substring=0%, hybrid 全面胜出 ✓
 ```
 
 **Benchmark 数据集** (`benchmarks/tasks.json`):
@@ -456,16 +477,16 @@ python generate_test_file.py
 ### 运行测试
 
 ```bash
-# 激活 ML2 环境
-conda activate ML2
+# 使用你的 Python 环境
+# 使用你的 Python 环境(需 pip install -e . 及 pytest)
 
-# 运行完整测试套件 (162 项)
+# 运行完整测试套件 (206 项)
 & "D:\ANACONDA\envs\ML2\python.exe" -m pytest tests/ -v
 
 # 运行性能测试
 & "D:\ANACONDA\envs\ML2\python.exe" -m pytest tests/test_performance.py -v -s
 
-# 运行四层评测 (benchmark suite)
+# 运行五层评测 (benchmark suite)
 & "D:\ANACONDA\envs\ML2\python.exe" -m mycoder eval --suite all --output .mycoder/eval
 ```
 
@@ -477,14 +498,20 @@ conda activate ML2
 | test_tools.py | 21 | 每种工具的 execute + error case + meta 字段 |
 | test_sandbox.py | 15 | PathEscapeError 拦截, rel兼容, snapshot 指纹, list过滤隐藏 |
 | test_safety.py | 27 | validate_params(11组合)/escape(4场景)/shell(4场景)/HITL(3策略)/dedup(3)/redact(5) |
-| test_context.py | 15 | CJK/ASCII token估计, fold/fold_to_1/enforce_budget, 深拷贝安全, deterministic replay |
-| test_memory.py | 19 | remember_task/update/parent_link, file_symbols/same_hash_skip, search, followup_context, save_load |
+| test_context.py | 19 | CJK/ASCII token估计, fold/fold_to_1/enforce_budget, 深拷贝安全, deterministic replay, 摘要器 |
+| test_memory.py | 19 | remember_task/update/parent_link, file_symbols/same_hash_skip, search(3模式), followup_context, save_load |
 | test_checkpoint.py | 15 | save_load_unicode/overwrite, exists/list_all, drift_compare, summary_text |
 | test_harness.py | 15 | run_flow(complete/artifacts/metrics/max_steps), safety_intercept, dedup, resume_flow |
-| test_eval.py | 13 | benchmark_data, eval_layers(regression/context/memory/resume), report_writing |
+| test_backend.py | 9 | 重试/指数退避/429/5xx/Retry-After, usage 解析, 流式 complete_stream |
+| test_cost.py | 5 | 按价目表核算 token 成本, 缺价目不计费 |
+| test_eval.py | 14 | benchmark_data, eval_layers(回归/上下文/记忆/恢复/检索), report_writing |
+| test_observability.py | 7 | Tracer span 层级/耗时, on_event 重建, JSON 日志, trace.json 导出 |
+| test_vectors.py | 11 | HashingEmbedder 确定性/归一化, 余弦, BM25 排序, HybridRetriever α 加权, FastEmbed 可选 |
+| test_api.py | 3 | health/追踪页, 提交→SSE→完成事件, 未知任务 404 |
+| test_orchestrator.py | 4 | 并行编排, 失败降级(partial), 默认 planner 单子任务, 事件发射 |
 | test_performance.py | 8 | 文件读取/列表/Grep/记忆/上下文/断点/工作区/工具注册 性能测试 |
 
-**总计**: 162 个测试用例
+**总计**: 206 个测试用例(16 个测试文件)
 
 ---
 
@@ -503,8 +530,13 @@ conda activate ML2
 | context.hard_limit_tokens | `6000` | 硬上限(强制截断) |
 | context.keep_last_turns | `6` | 保留最近N轮原文 |
 | context.max_file_content_chars | `8000` | 单次工具返回截断阈值 |
+| context.summarizer | `"deterministic"` | deterministic \| llm(模型压缩,失败回退) |
+| logging.format | `"text"` | text \| json(结构化 JSON 日志) |
 | memory.enabled | `true` | 启用结构化记忆 |
 | memory.followup_inject_summaries | `true` | follow-up自动注入文件摘要 |
+| memory.retrieval.mode | `"substring"` | substring(默认)\| vector \| hybrid |
+| memory.retrieval.alpha | `0.5` | hybrid 中向量权重 |
+| memory.retrieval.embedder | `"hashing"` | hashing(零依赖)\| fastembed(可选) |
 | checkpoint.interval_steps | `4` | 每N步落盘一次 |
 | checkpoint.detect_drift | `true` | resume时检测工作区漂移 |
 | safety.hitl_policy | `"prompt"` | prompt \|\| allow \|\| deny |
@@ -512,6 +544,11 @@ conda activate ML2
 | safety.redaction_enabled | `true` | 启用敏感信息脱敏 |
 | api.host | `"127.0.0.1"` | API服务器绑定地址 |
 | api.port | `8910` | API服务器端口 |
+| logging.level | `"INFO"` | 日志级别 |
+| observability.enabled | `true` | 导出 trace.json 链路追踪 |
+| agent.orchestrator.enabled | `false` | 子代理编排开关(默认关闭) |
+| agent.orchestrator.max_workers | `4` | 并行子任务数 |
+| model.pricing | `{}` | 成本核算价目表(每 1k token 美元) |
 
 ---
 
@@ -545,12 +582,12 @@ conda activate ML2
 
 本项目实现了完整的本地 Coding Agent Harness, 涵盖:
 
-✅ **6 大核心模块** — Harness主循环 / 上下文治理 / 结构化记忆 / Checkpoint+漂移 / 工具安全 / 评测审计  
+✅ **9 大核心模块** — Harness主循环 / 上下文治理 / 结构化记忆 / Checkpoint+漂移 / 工具安全 / 评测审计  
 ✅ **2 类模型后端** — MockBackend(全离线脚本化) / LocalOpenAIBackend(127.0.0.1:port)  
 ✅ **7 类工具** — file_read/write/edit/list, grep, shell, memory_query  
 ✅ **3 类运行工件** — trajectory.jsonl(轨迹) + checkpoint.json(断点) + metrics.json+report.md(报告)  
 ✅ **12 个 Benchmark 任务** — regression(4)/context(3)/memory(4)/resume(1)  
-✅ **162 项自动化测试** — 覆盖全部模块 + 性能测试, 全部通过  
+✅ **206 项自动化测试** — 覆盖全部模块 + 性能测试, 全部通过  
 ✅ **8 维度性能测试** — 使用巨型文件(~4669行)进行压力测试  
 ✅ **上下文治理演示** — context_demo.py 展示三层裁剪策略  
 ✅ **完整文档** — README / ARCHITECTURE / OUTLINE / TESTING / FINAL_SUMMARY  

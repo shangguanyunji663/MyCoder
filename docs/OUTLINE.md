@@ -43,8 +43,9 @@
   - 三层裁剪策略: fold_old_turns → drop_stale_turns → truncate_long_content
 
 ### 5. 结构化记忆 (memory/)
-- `store.py`: StructuredMemory(三层存储: tasks/files/relations)
+- `store.py`: StructuredMemory(三层存储: tasks/files/relations,substring/vector/hybrid 检索)
 - `retriever.py`: MemoryRetriever(检索接口)
+- `vectors.py`: 向量检索(HashingEmbedder/VectorIndex/BM25/HybridRetriever)
 
 ### 6. 断点与恢复 (checkpoint/)
 - `store.py`: CheckpointStore(断点保存/加载)
@@ -55,18 +56,28 @@
 - `redact.py`: Redactor(敏感信息脱敏)
 
 ### 8. 主循环 (agent/)
-- `harness.py`: AgentHarness(主调度循环,run/resume)
+- `harness.py`: AgentHarness(主调度循环,run/resume,on_event 埋点)
+- `orchestrator.py`: Orchestrator(子代理并行编排,独立子工作区)
 
-### 9. localhost API (api/)
+### 9. 可观测性 (observability/)
+- `tracing.py`: Span / Tracer(零依赖,OTLP 风格 trace.json + 可选 OTel 桥接)
+
+### 10. localhost API (api/)
 - `server.py`: HTTP API 服务(127.0.0.1:8910,标准库实现)
+- `event_bus.py`: TaskEventBus(进程内事件队列)
+- `fastapi_server.py`: FastAPI + SSE 实现(可选依赖)
+- `trace_page.py`: vanilla JS 实时追踪页
 
-### 10. 评测审计 (eval/)
-- `benchmark.py`: benchmark 数据加载(12 个任务)
+### 11. 评测审计 (eval/)
+- `benchmark.py`: benchmark 数据加载(12 个任务 + 检索用例)
 - `experiment.py`: 对照实验原语(compare_metrics, format_delta)
-- `runner.py`: EvalRunner(四层评测运行器)
+- `runner.py`: EvalRunner(五层评测运行器)
 
-### 11. 命令行接口
-- `cli.py`: argparse 子命令(run/resume/serve/eval/benchmark/artifacts/doctor)
+### 12. 成本核算 (cost.py)
+- 按 `model.pricing` 价目表核算每次运行的 token 成本
+
+### 13. 命令行接口
+- `cli.py`: argparse 子命令(run/resume/serve/orchestrate/eval/benchmark/artifacts/doctor)
 - `__main__.py`: python -m mycoder 入口
 
 ## Benchmark 任务设计
@@ -127,17 +138,23 @@
 - mycoder/api/: server.py, __init__.py
 - mycoder/eval/: benchmark.py, experiment.py, runner.py, __init__.py
 
-### 测试 (11 个测试文件,162 个测试用例)
+### 测试 (16 个测试文件,206 个测试用例)
 - tests/conftest.py
 - tests/test_models.py (14 个用例)
 - tests/test_tools.py (21 个用例)
 - tests/test_sandbox.py (15 个用例)
 - tests/test_safety.py (27 个用例)
-- tests/test_context.py (15 个用例)
+- tests/test_context.py (19 个用例)
 - tests/test_memory.py (19 个用例)
 - tests/test_checkpoint.py (15 个用例)
 - tests/test_harness.py (15 个用例)
-- tests/test_eval.py (13 个用例)
+- tests/test_backend.py (9 个用例 — 重试/退避/流式/usage)
+- tests/test_cost.py (5 个用例 — 成本核算)
+- tests/test_eval.py (14 个用例 — 五层评测)
+- tests/test_observability.py (7 个用例 — 链路追踪/JSON 日志)
+- tests/test_vectors.py (11 个用例 — 嵌入/BM25/混合检索)
+- tests/test_api.py (3 个用例 — FastAPI SSE)
+- tests/test_orchestrator.py (4 个用例 — 并行/降级/事件)
 - tests/test_performance.py (8 个用例 — 性能测试)
 
 ### 配置与文档
@@ -175,10 +192,16 @@ conda activate ML2
 & "D:\ANACONDA\envs\ML2\python.exe" -m pytest tests/test_performance.py -v
 
 # 运行评测
-& "D:\ANACONDA\envs\ML2\python.exe" -m mycoder eval --suite all
+python -m mycoder eval --suite all
 
-# 启动 API
-& "D:\ANACONDA\envs\ML2\python.exe" -m mycoder serve
+# 启动 API(标准库,零依赖)
+python -m mycoder serve
+
+# 启动 API(FastAPI + SSE 实时追踪,需 api 依赖组)
+python -m mycoder serve --impl fastapi
+
+# 子代理编排
+python -m mycoder orchestrate --goal "实现用户认证模块并补齐单元测试"
 ```
 
 ## 扩展建议
@@ -187,6 +210,7 @@ conda activate ML2
 2. **添加新模型后端**: 继承 ModelBackend,实现 complete()
 3. **添加新安全策略**: 实现 ApprovalProvider 接口
 4. **添加新评测层**: 在 EvalRunner 中添加 layer_xxx() 方法
+5. **增强检索**: 接入 `FastEmbedEmbedder`(pip install 'mycoder-harness[vector]')提升语义召回
 
 ## 已知限制
 
@@ -194,11 +218,12 @@ conda activate ML2
 2. MockBackend 脚本化,无法模拟真实 LLM 的不确定性
 3. LocalOpenAIBackend 需要本地部署 OpenAI 兼容服务
 4. 工作区沙箱基于路径解析,未处理并发访问
+5. 默认 HashingEmbedder 为字符 n-gram 哈希,语义召回弱于真实嵌入器(可切换 fastembed)
 
 ## 未来工作
 
 1. 支持更多模型后端(Anthropic, 本地 GGUF 等)
 2. 支持并发工具执行
-3. 支持多 Agent 协作
-4. 支持可视化轨迹回放
-5. 支持更精细的 token 估算(集成真实 tokenizer)
+3. 支持可视化轨迹回放(已具备 trace.json + SSE 追踪页基础)
+4. 支持更精细的 token 估算(集成真实 tokenizer)
+5. Orchestrator 接入 LLM Planner 做智能子任务分解

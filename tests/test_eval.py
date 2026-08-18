@@ -72,7 +72,14 @@ class TestEvalLayers:
         assert reports["resume"]["accuracy"] == 1.0
 
     def test_all_layers_present(self, reports):
-        assert set(reports) == {"regression", "context", "memory", "resume"}
+        assert set(reports) == {"regression", "context", "memory", "resume", "retrieval"}
+
+    def test_retrieval_layer(self, reports):
+        rep = reports["retrieval"]
+        assert rep["ok"] is True
+        # hybrid 在同义查询上必须全面胜出 substring,且本身 recall@3 > 0
+        assert rep["avg_recall"]["hybrid"][3] > rep["avg_recall"]["substring"][3]
+        assert rep["avg_recall"]["hybrid"][3] > 0
 
     def test_deterministic_repeat(self, tmp_path):
         out1 = tmp_path / "e1"

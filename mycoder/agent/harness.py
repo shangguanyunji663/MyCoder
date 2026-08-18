@@ -27,6 +27,7 @@ from ..config import Config
 from ..context import ContextManager, PruneInfo
 from ..cost import CostTracker
 from ..memory import StructuredMemory
+from ..memory.vectors import HashingEmbedder
 from ..models import ModelBackend
 from ..safety import Redactor, SafetyGuard
 from ..state import Message, RunResult, Step, TaskInput, ToolCall
@@ -70,18 +71,39 @@ def _metrics_restore(snap: dict) -> Metrics:
     return m
 
 
+class JsonFormatter(logging.Formatter):
+    """结构化 JSON 日志格式(逐行 JSON,可被 json.loads 解析)。"""
+
+    def format(self, record: logging.LogRecord) -> str:
+        obj = {
+            "ts": self.formatTime(record, "%Y-%m-%dT%H:%M:%S"),
+            "level": record.levelname,
+            "logger": record.name,
+            "message": record.getMessage(),
+        }
+        if record.exc_info:
+            obj["exc"] = self.formatException(record.exc_info)
+        return json.dumps(obj, ensure_ascii=False)
+
+
 def get_logger(config: Config) -> logging.Logger:
     logger = logging.getLogger("mycoder")
     logger.setLevel(config.get("logging.level", "INFO"))
     if not logger.handlers:
+        fmt_mode = config.get("logging.format", "text")
+        if fmt_mode == "json":
+            formatter: logging.Formatter = JsonFormatter()
+        else:
+            formatter = logging.Formatter("%(asctime)s %(levelname)s %(message)s")
         if config.get("logging.file"):
             fh = logging.FileHandler(config.get("logging.file"), encoding="utf-8")
-            fh.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(message)s"))
+            fh.setFormatter(formatter)
             logger.addHandler(fh)
         if config.get("logging.console", True):  # 同时输出控制台,便于本地观察
             import sys
             sh = logging.StreamHandler(sys.stderr)
-            sh.setFormatter(logging.Formatter("[%(levelname)s] %(message)s"))
+            sh.setFormatter(formatter if fmt_mode == "json" else
+                            logging.Formatter("[%(levelname)s] %(message)s"))
             logger.addHandler(sh)
         logger.propagate = False
     return logger
@@ -95,13 +117,15 @@ class AgentHarness:
                  registry: ToolRegistry, memory: StructuredMemory | None = None,
                  guard: SafetyGuard | None = None, checkpoint: CheckpointStore | None = None,
                  artifacts: ArtifactManager | None = None, redactor: Redactor | None = None,
-                 summarizer=None):
+                 summarizer=None, on_event=None):
         self.config = config
         self.backend = backend
         self.workspace = workspace
         self.registry = registry
         self.memory = memory
         self.redactor = redactor or Redactor(enabled=False)
+        # on_event:最小侵入的事件总线(可观测性 Tracer / API SSE EventBus 都接这里)
+        self.on_event = on_event
         self.checkpoint = checkpoint or CheckpointStore(config.get("checkpoint.root", ".mycoder/checkpoints"),
                                                         enabled=False)
         self.artifacts = artifacts or ArtifactManager(config.get("artifacts.root", ".mycoder/artifacts"),
@@ -118,7 +142,7 @@ class AgentHarness:
     @classmethod
     def build(cls, config: Config, backend: ModelBackend | None = None,
               workspace_root: str | None = None, memory_root: str | None = None,
-              approver=None) -> AgentHarness:
+              approver=None, on_event=None) -> AgentHarness:
         from ..models import create_backend
         backend = backend or create_backend(config)
         ws_root = workspace_root or config.get("workspace.root", ".")
@@ -126,7 +150,11 @@ class AgentHarness:
         from ..tools import build_registry
         registry = build_registry()
         memory = StructuredMemory(memory_root or config.get("memory.root", ".mycoder/memory"),
-                                  enabled=config.get("memory.enabled", True))
+                                  enabled=config.get("memory.enabled", True),
+                                  retrieval_mode=config.get("memory.retrieval.mode", "substring"),
+                                  hybrid_alpha=float(config.get("memory.retrieval.alpha", 0.5)),
+                                  embedder=_make_embedder(config))
+
         redactor = Redactor(enabled=config.get("safety.redaction_enabled", True))
         guard = SafetyGuard(config, ws, approver=approver, redactor=redactor)
         cp = CheckpointStore(config.get("checkpoint.root", ".mycoder/checkpoints"),
@@ -138,8 +166,37 @@ class AgentHarness:
         if config.get("context.summarizer") == "llm":
             from ..context.summarizer import LLMSummarizer
             summarizer = LLMSummarizer(backend=backend)
-        return cls(config, backend, ws, registry, memory, guard, cp, am, redactor,
-                   summarizer=summarizer)
+        # 可观测性:Tracer 作为默认 on_event 消费者(零依赖,导出 trace.json);
+        # 若调用方传入自己的 on_event(API SSE EventBus),则两者都收到事件。
+        tracer = None
+        if config.get("observability.enabled", True):
+            from ..observability import Tracer
+            tracer = Tracer(artifacts_root=config.get("artifacts.root", ".mycoder/artifacts"),
+                            enabled=True)
+        harness = cls(config, backend, ws, registry, memory, guard, cp, am, redactor,
+                      summarizer=summarizer, on_event=on_event)
+
+        def _dispatch(event: dict) -> None:
+            if tracer is not None:
+                tracer.handle(event)
+            if on_event is not None:
+                on_event(event)
+
+        harness.on_event = _dispatch
+        return harness
+
+    # ------------------------------------------------------------------
+    def _emit(self, event: dict) -> None:
+        """把语义事件发给 on_event 消费者(可观测性 Tracer / SSE EventBus)。
+
+        埋点绝不能拖垮主链路:任何异常都被吞掉。
+        """
+        if self.on_event is None:
+            return
+        try:
+            self.on_event(event)
+        except Exception:
+            pass
 
     # ------------------------------------------------------------------
     def run(self, task: TaskInput, stop_after_steps: int | None = None) -> RunResult:
@@ -200,6 +257,8 @@ class AgentHarness:
 
         recorder.record({"type": "task_start", "task_id": task.task_id, "ts": now_iso(),
                          "follow_up_of": task.follow_up_of, "reason": reason})
+        self._emit({"type": "task_start", "task_id": task.task_id, "ts": now_iso(),
+                    "follow_up_of": task.follow_up_of, "reason": reason})
 
         max_steps = int(self.config.get("harness.max_steps", 30))
         status, final_answer, error = "completed", "", None
@@ -215,6 +274,7 @@ class AgentHarness:
 
                 # 1) 组装 + 裁剪上下文
                 messages = self.context.assemble()
+                self._emit({"type": "step_start", "index": step_idx, "ts": now_iso()})
                 # 2) 调用模型
                 t0 = time.time()
                 resp = self.backend.complete(messages, self.registry.schemas())
@@ -226,6 +286,9 @@ class AgentHarness:
                 c_tokens = int(usage.get("completion_tokens") or 0)
                 model_name = getattr(self.backend, "model", "") or "unknown"
                 step_cost = self.cost_tracker.cost_of(model_name, p_tokens, c_tokens)
+                self._emit({"type": "model_call", "index": step_idx, "model": model_name,
+                            "prompt_tokens": p_tokens, "completion_tokens": c_tokens,
+                            "latency_ms": latency_ms, "ts": now_iso()})
 
                 assistant = Message("assistant", resp.content,
                                     tool_calls=resp.tool_calls or None)
@@ -234,6 +297,7 @@ class AgentHarness:
                 if not resp.tool_calls:
                     final_answer = resp.content
                     self.context.append_turn(assistant, [])
+                    self._emit({"type": "step_end", "index": step_idx, "ts": now_iso()})
                     steps.append(Step(index=step_idx, assistant=assistant,
                                       prompt_tokens=p_tokens,
                                       prompt_before_tokens=self.context.last_prune.before_tokens,
@@ -254,7 +318,7 @@ class AgentHarness:
                     break
 
                 # 4) 执行工具
-                calls, tool_msgs = self._execute_tools(resp.tool_calls)
+                calls, tool_msgs = self._execute_tools(resp.tool_calls, step_index=step_idx)
                 self.context.append_turn(assistant, tool_msgs)
 
                 step = Step(index=step_idx, assistant=assistant, tool_calls=calls,
@@ -266,6 +330,7 @@ class AgentHarness:
                             latency_ms=latency_ms)
                 steps.append(step)
                 self._record_step(recorder, step)
+                self._emit({"type": "step_end", "index": step_idx, "ts": now_iso()})
 
                 # 5) 指标 & checkpoint
                 self.metrics.steps += 1
@@ -301,11 +366,13 @@ class AgentHarness:
         self.artifacts.export(task.task_id, self.metrics, result_payload,
                               checkpoint_obj=self.checkpoint.load(task.task_id))
         recorder.record({"type": "task_end", "status": status, "ts": now_iso()})
+        self._emit({"type": "task_end", "status": status, "ts": now_iso()})
         return RunResult(task_id=task.task_id, status=status, final_answer=final_answer,
                          steps=steps, metrics=self.metrics.snapshot(), drift=drift, error=error)
 
     # ------------------------------------------------------------------
-    def _execute_tools(self, raw_calls: list[dict]) -> tuple[list[ToolCall], list[Message]]:
+    def _execute_tools(self, raw_calls: list[dict], step_index: int | None = None
+                       ) -> tuple[list[ToolCall], list[Message]]:
         """执行一轮工具调用:安全链 -> 执行 -> 脱敏 -> 记忆沉淀。"""
         calls: list[ToolCall] = []
         tool_msgs: list[Message] = []
@@ -333,11 +400,16 @@ class AgentHarness:
                 call.error = f"未知工具: {name}"
                 output = f"[已拦截] 未知工具: {name}"
             else:
+                t0 = time.time()
                 output, meta = self._run_one_tool(tool, params, ctx)
+                tool_latency = int((time.time() - t0) * 1000)
                 call.status = meta.get("status", "ok")
                 call.error = meta.get("error")
                 call.output = output
                 call.meta = meta
+                self._emit({"type": "tool_call", "step_index": step_index,
+                            "name": name, "status": call.status,
+                            "latency_ms": tool_latency, "ts": now_iso()})
             calls.append(call)
             tool_msgs.append(Message("tool", output, name=name, tool_call_id=tc.get("id", "")))
         return calls, tool_msgs
@@ -425,6 +497,8 @@ class AgentHarness:
         }
         self.checkpoint.save(task.task_id, snap)
         self.logger.info("checkpoint: task=%s step=%s reason=%s", task.task_id, step, reason)
+        self._emit({"type": "checkpoint", "step": step, "reason": reason,
+                    "task_id": task.task_id, "ts": now_iso()})
 
     def _remember_task(self, task: TaskInput, status: str, answer: str) -> None:
         if self.memory is None:
@@ -456,3 +530,12 @@ class AgentHarness:
             "latency_ms": step.latency_ms,
             "ts": now_iso(),
         })
+
+
+def _make_embedder(config) -> HashingEmbedder:
+    """按配置选择嵌入器:默认 hashing(零依赖),可选 fastembed(懒加载)。"""
+    kind = config.get("memory.retrieval.embedder", "hashing")
+    if kind == "fastembed":
+        from ..memory.vectors import FastEmbedEmbedder
+        return FastEmbedEmbedder()
+    return HashingEmbedder()

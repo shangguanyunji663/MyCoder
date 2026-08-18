@@ -905,13 +905,14 @@ def resume(self, task_id):
 
 ## 第 9 站 评测闭环:eval/
 
-### 9.1 四层评测理念
+### 9.1 五层评测理念
 
 ```
 Layer 1 回归: 运行时稳定性(能完成、工件齐全、断言满足)
 Layer 2 上下文: 预算裁剪收益(治理 vs 不治理的 token 差)
 Layer 3 记忆: follow-up 重读归零、正确率
 Layer 4 恢复: checkpoint/resume + 漂移识别边界
+Layer 5 检索: 混合检索召回率(substring/vector/hybrid, recall@3)
 ```
 
 **核心理念**:用同一个确定性 mock 轨迹驱动,唯一变量是 harness 系统开关 → 测的是**系统能力**,不是模型能力。
@@ -962,6 +963,20 @@ def layer_resume(self, tasks):
 - 评测的"对照实验"思想:固定任务/数据,只改变系统开关
 - `experiment.py` 的 `compare_metrics()` 把两组指标做 diff → 可读的改进量
 
+### 9.5 Layer 5 检索召回评测(benchmarks/retrieval.json)
+
+```python
+def layer_retrieval(self):
+    bench = json.load(open("benchmarks/retrieval.json"))
+    for q in bench["queries"]:          # 6 条同义/改写查询
+        hyb = retriever.search(q, mode="hybrid")
+        sub = retriever.search(q, mode="substring")
+        # 断言:hybrid recall@3 == 1.0,substring 在同义查询上 == 0.0
+```
+
+- **对照变量**:同一查询,`mode="hybrid"`(向量 cosine + BM25 加权) vs `mode="substring"`(字面匹配)
+- 关键结论:纯子串匹配对"同义改写"完全失效(recall@3 = 0%),混合检索 100% 命中 → 实证记忆检索需要语义向量
+
 ---
 
 ## 第 10 站 收尾:cli / api / examples / tests
@@ -969,14 +984,17 @@ def layer_resume(self, tasks):
 ### 10.1 CLI (cli.py)
 
 ```python
-# 子命令:run / resume / serve / eval / benchmark / artifacts / doctor
+# 子命令:run / resume / serve / eval / benchmark / artifacts / doctor / orchestrate
 ```
 - `run`:运行单个任务
 - `resume`:从断点恢复
-- `serve`:启动 localhost API
-- `eval`:运行四层评测
+- `serve`:启动 localhost API(`--impl stdlib|fastapi`)
+- `eval`:运行五层评测(`--suite all|retrieval`)
+- `orchestrate`:把复杂目标分解为子任务并行编排执行(`--goal` / `--max-workers`)
 
-### 10.2 API (api/server.py)
+### 10.2 API
+
+**标准库服务 (api/server.py)**
 
 ```python
 # ThreadingHTTPServer,127.0.0.1:8910
@@ -985,20 +1003,39 @@ def layer_resume(self, tasks):
 # POST /resume → 恢复任务
 ```
 
+**FastAPI + SSE 服务 (api/event_bus.py + api/fastapi_server.py)**
+
+```python
+# POST /api/run                  → 启动任务,返回 task_id
+# GET  /api/run/{id}             → 任务状态/结果快照
+# GET  /api/run/{id}/events      → SSE 流式事件(含 done 哨兵 + 15s 心跳保活)
+# GET  /api/artifacts/{id}/{name}→ 下载工件
+# GET  /health / /              → 健康检查 + 内置 trace 可视化页面
+```
+
+- `TaskEventBus`(api/event_bus.py)是事件中枢:harness 的 `on_event` 回调把事件推入总线,既驱动 SSE,也写入 `trace.json`
+- `--impl fastapi` 时由 `create_app()` 装配;默认仍走零依赖的 stdlib 实现(`pip install 'mycoder-harness[api]'` 启用 FastAPI 路径)
+
 ### 10.3 测试套件
 
 ```
-test_models.py      (14)  MockBackend 脚本 progression/state恢复
-test_tools.py       (21)  每种工具 execute + error case
-test_sandbox.py     (15)  路径逃逸拦截
-test_safety.py      (27)  参数校验/隔离/HITL/去重/脱敏
-test_context.py     (15)  token估算/折叠/硬限额
-test_memory.py      (19)  三层存储/去重/检索/持久化
-test_checkpoint.py  (15)  断点/漂移
-test_harness.py     (15)  主循环/安全拦截/恢复
-test_eval.py        (13)  四层评测
-test_performance.py (8)   压力测试(巨型文件)
-总计: 162 项
+test_models.py        (14)  MockBackend 脚本 progression/state恢复
+test_tools.py         (21)  每种工具 execute + error case
+test_sandbox.py       (15)  路径逃逸拦截
+test_safety.py        (27)  参数校验/隔离/HITL/去重/脱敏
+test_context.py       (19)  token估算/折叠/硬限额
+test_memory.py        (19)  三层存储/去重/检索/持久化
+test_checkpoint.py    (15)  断点/漂移
+test_harness.py       (15)  主循环/安全拦截/恢复
+test_backend.py        (9)  MockBackend 脚本引擎
+test_cost.py           (5)  成本计量
+test_eval.py          (14)  五层评测
+test_observability.py  (7)  Span/Tracer/trace.json/JSON 日志
+test_vectors.py       (11)  Embedding/VectorIndex/BM25/HybridRetriever
+test_api.py            (3)  FastAPI 路由/SSE/工件下载
+test_orchestrator.py   (4)  子任务分解/并行/降级
+test_performance.py    (8)  压力测试(巨型文件)
+总计: 206 项(16 个测试文件)
 ```
 
 ### 10.4 性能测试
@@ -1039,6 +1076,6 @@ TaskInput → Harness.run() → [assemble → complete → check → execute →
 读完本指南后,建议按以下顺序实操:
 1. 运行 `pytest tests/ -v` 看全部测试通过
 2. 运行 `examples/context_demo.py` 看上下文治理效果
-3. 运行 `python -m mycoder eval --suite all` 看四层评测报告
+3. 运行 `python -m mycoder eval --suite all` 看五层评测报告
 4. 阅读 `tests/test_harness.py` 理解主循环测试方式
 5. 尝试修改 `config/default.yaml` 的参数,观察行为变化

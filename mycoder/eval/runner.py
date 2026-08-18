@@ -16,10 +16,13 @@ import shutil
 from pathlib import Path
 
 from ..config import Config
+from ..memory import StructuredMemory
 from ..models import MockBackend
 from ..safety import AllowAllProvider
 from ..state import RunResult, TaskInput
 from .benchmark import by_layer, load_benchmarks
+
+_RETRIEVAL_PATH = Path(__file__).resolve().parent.parent.parent / "benchmarks" / "retrieval.json"
 
 
 def _generate_file(spec: dict) -> str:
@@ -60,6 +63,8 @@ class EvalRunner:
             reports["memory"] = self.layer_memory(tasks)
         if suite in ("all", "resume"):
             reports["resume"] = self.layer_resume(tasks)
+        if suite in ("all", "retrieval"):
+            reports["retrieval"] = self.layer_retrieval()
         return reports
 
     def write_report(self, reports: dict[str, dict]) -> None:
@@ -300,6 +305,61 @@ class EvalRunner:
                 "summary": (f"漂移识别准确率 {accuracy:.0%}"
                             f"({drift_detected}/5 漂移检出, {clean_correct}/5 无漂移正确)"),
                 "details": details, "scenarios": scenarios, "accuracy": accuracy}
+
+    # ------------------------------------------------------------------
+    # Layer 5: 检索召回
+    def layer_retrieval(self, tasks: list[dict] | None = None) -> dict:
+        """Layer 5:检索召回评测。对比 substring(子串) 与 hybrid(向量+BM25) 两种模式。
+
+        验收要点:同义改写查询下,substring 因缺乏相同子串而召回为 0;hybrid 借助
+        字符 n-gram 余弦 + BM25 词频仍能把相关记忆排进 top-k —— 即 hybrid recall@3
+        显著优于 substring,验证"语义/混合检索"对原 substring 检索的增益。
+        """
+        if tasks is None:
+            tasks = load_benchmarks(_RETRIEVAL_PATH)
+        rt = by_layer(tasks, "retrieval")
+        details: list[str] = []
+        per_query: list[dict] = []
+        total_q = 0
+        hybrid_wins = 0
+        sum_recall = {"substring": {1: 0.0, 3: 0.0, 5: 0.0},
+                      "hybrid": {1: 0.0, 3: 0.0, 5: 0.0}}
+        for t in rt:
+            mem = StructuredMemory(
+                str(self.output_dir / "retrieval_ws" / t["task_id"] / "memory"),
+                enabled=True)
+            for doc in t.get("corpus", []):
+                mem.remember_file(path=doc["id"], content=doc["text"])
+            for q in t.get("queries", []):
+                total_q += 1
+                relevant = {"file:" + r for r in q["relevant"]}
+                row = {"task": t["task_id"], "query": q["q"],
+                       "relevant": sorted(relevant)}
+                for mode in ("substring", "hybrid"):
+                    ranked = mem.rank(q["q"], mode=mode, top_k=5, kind="file")
+                    for k in (1, 3, 5):
+                        topk = {i for i, _ in ranked[:k]}
+                        rec = (len(relevant & topk) / len(relevant)) if relevant else 0.0
+                        sum_recall[mode][k] += rec
+                        if k == 3:
+                            row[f"{mode}@3"] = round(rec, 3)
+                if row["hybrid@3"] > row["substring@3"]:
+                    hybrid_wins += 1
+                per_query.append(row)
+                details.append(f"{t['task_id']} q={q['q'][:18]!r}: "
+                               f"substring@3={row['substring@3']:.0%}, "
+                               f"hybrid@3={row['hybrid@3']:.0%}")
+        n = total_q or 1
+        avg = {m: {k: sum_recall[m][k] / n for k in (1, 3, 5)}
+               for m in ("substring", "hybrid")}
+        summary = (f"同义查询 {total_q} 个:hybrid 胜出 {hybrid_wins}/{total_q}; "
+                   f"substring 平均 recall@1/3/5="
+                   f"{avg['substring'][1]:.0%}/{avg['substring'][3]:.0%}/{avg['substring'][5]:.0%}, "
+                   f"hybrid={avg['hybrid'][1]:.0%}/{avg['hybrid'][3]:.0%}/{avg['hybrid'][5]:.0%}")
+        ok = (hybrid_wins == total_q and avg["hybrid"][3] > avg["substring"][3]
+              and avg["hybrid"][3] > 0)
+        return {"ok": ok, "summary": summary, "details": details,
+                "per_query": per_query, "avg_recall": avg}
 
     @staticmethod
     def _mutate_workspace(workdir: Path, k: int) -> None:
