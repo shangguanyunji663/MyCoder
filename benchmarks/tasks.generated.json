@@ -1,0 +1,3572 @@
+{
+  "tasks": [
+    {
+      "task_id": "g_reg_p00",
+      "layer": "regression",
+      "kind": "positive",
+      "goal": "参数化正例 0:对 alpha_mod_0.py 做基础文件操作。",
+      "files_hint": [
+        "alpha_mod_0.py"
+      ],
+      "script": [
+        {
+          "tool_calls": [
+            {
+              "name": "file_write",
+              "arguments": {
+                "path": "alpha_mod_0.py",
+                "content": "# REG_P0_HEAD\nKEEP_LINE_0 = True\nline_0: value=0\nline_1: value=1\nline_2: value=2\nline_3: value=3\nline_4: value=4\nline_5: value=5\nline_6: value=6\nline_7: value=7\nline_8: value=8\nline_9: value=9\nline_10: value=10\nline_11: value=11\nline_12: value=12\nline_13: value=13\nline_14: value=14\nline_15: value=15\nline_16: value=16\nline_17: value=17\nline_18: value=18\nline_19: value=19\nline_20: value=20\nline_21: value=21\nline_22: value=22\nline_23: value=23\nline_24: value=24\nline_25: value=25\nline_26: value=26\nline_27: value=27\nline_28: value=28\nline_29: value=29\nline_30: value=30\nline_31: value=31\nline_32: value=32\nline_33: value=33\nline_34: value=34\nline_35: value=35\nline_36: value=36\nline_37: value=37\nline_38: value=38\nline_39: value=39\nline_40: value=40\nline_41: value=41\nline_42: value=42\nline_43: value=43\nline_44: value=44\nline_45: value=45\nline_46: value=46\nline_47: value=47\nline_48: value=48\nline_49: value=49\nline_50: value=50\nline_51: value=51\nline_52: value=52\nline_53: value=53\nline_54: value=54\nline_55: value=55\nline_56: value=56\nline_57: value=57\nline_58: value=58\nline_59: value=59\nline_60: value=60\nline_61: value=61\nline_62: value=62\nline_63: value=63\nline_64: value=64\nline_65: value=65\nline_66: value=66\nline_67: value=67\nline_68: value=68\nline_69: value=69\nline_70: value=70\nline_71: value=71\nline_72: value=72\nline_73: value=73\nline_74: value=74\nline_75: value=75\nline_76: value=76\nline_77: value=77\nline_78: value=78\nline_79: value=79\nline_80: value=80\nline_81: value=81\nline_82: value=82\nline_83: value=83\nline_84: value=84\nline_85: value=85\nline_86: value=86\nline_87: value=87\nline_88: value=88\nline_89: value=89\nline_90: value=90\nline_91: value=91\n"
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "alpha_mod_0.py",
+                "offset": 0,
+                "limit": 23
+              }
+            }
+          ]
+        },
+        {
+          "content": "已创建并读回 alpha_mod_0.py。"
+        }
+      ],
+      "expect": {
+        "files_created": [
+          "alpha_mod_0.py"
+        ],
+        "final_contains": "alpha_mod_0.py"
+      }
+    },
+    {
+      "task_id": "g_reg_p01",
+      "layer": "regression",
+      "kind": "positive",
+      "goal": "参数化正例 1:对 beta_mod_1.py 做基础文件操作。",
+      "files_hint": [
+        "beta_mod_1.py"
+      ],
+      "script": [
+        {
+          "tool_calls": [
+            {
+              "name": "file_write",
+              "arguments": {
+                "path": "pkg_1/src/beta_mod_1.py",
+                "content": "# REG_P1_HEAD\nKEEP_LINE_1 = True\nline_0: value=0\nline_1: value=1\nline_2: value=2\nline_3: value=3\nline_4: value=4\nline_5: value=5\nline_6: value=6\nline_7: value=7\nline_8: value=8\nline_9: value=9\nline_10: value=10\nline_11: value=11\nline_12: value=12\nline_13: value=13\nline_14: value=14\nline_15: value=15\nline_16: value=16\nline_17: value=17\nline_18: value=18\nline_19: value=19\nline_20: value=20\nline_21: value=21\nline_22: value=22\nline_23: value=23\nline_24: value=24\nline_25: value=25\nline_26: value=26\nline_27: value=27\nline_28: value=28\nline_29: value=29\nline_30: value=30\nline_31: value=31\nline_32: value=32\nline_33: value=33\nline_34: value=34\nline_35: value=35\nline_36: value=36\nline_37: value=37\nline_38: value=38\nline_39: value=39\nline_40: value=40\nline_41: value=41\nline_42: value=42\nline_43: value=43\nline_44: value=44\nline_45: value=45\nline_46: value=46\nline_47: value=47\nline_48: value=48\nline_49: value=49\nline_50: value=50\nline_51: value=51\nline_52: value=52\nline_53: value=53\nline_54: value=54\nline_55: value=55\nline_56: value=56\nline_57: value=57\nline_58: value=58\nline_59: value=59\nline_60: value=60\nline_61: value=61\nline_62: value=62\nline_63: value=63\nline_64: value=64\nline_65: value=65\nline_66: value=66\nline_67: value=67\nline_68: value=68\nline_69: value=69\nline_70: value=70\nline_71: value=71\nline_72: value=72\nline_73: value=73\nline_74: value=74\nline_75: value=75\nline_76: value=76\nline_77: value=77\nline_78: value=78\nline_79: value=79\nline_80: value=80\nline_81: value=81\nline_82: value=82\nline_83: value=83\nline_84: value=84\nline_85: value=85\nline_86: value=86\nline_87: value=87\nline_88: value=88\nline_89: value=89\nline_90: value=90\nline_91: value=91\nline_92: value=92\nline_93: value=93\nline_94: value=94\nline_95: value=95\nline_96: value=96\nline_97: value=97\n"
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "pkg_1/src/beta_mod_1.py",
+                "offset": 0,
+                "limit": 20
+              }
+            }
+          ]
+        },
+        {
+          "content": "嵌套路径 pkg_1/src/beta_mod_1.py 处理完成。"
+        }
+      ],
+      "expect": {
+        "files_created": [
+          "pkg_1/src/beta_mod_1.py"
+        ],
+        "final_contains": "完成"
+      }
+    },
+    {
+      "task_id": "g_reg_p02",
+      "layer": "regression",
+      "kind": "positive",
+      "goal": "参数化正例 2:对 gamma_mod_2.py 做基础文件操作。",
+      "files_hint": [
+        "gamma_mod_2.py"
+      ],
+      "script": [
+        {
+          "tool_calls": [
+            {
+              "name": "file_write",
+              "arguments": {
+                "path": "gamma_mod_2.py",
+                "content": "# REG_P2_HEAD\nKEEP_LINE_2 = True\nline_0: value=0\nline_1: value=1\nline_2: value=2\nline_3: value=3\nline_4: value=4\nline_5: value=5\nline_6: value=6\nline_7: value=7\nline_8: value=8\nline_9: value=9\nline_10: value=10\nline_11: value=11\nline_12: value=12\nline_13: value=13\nline_14: value=14\nline_15: value=15\nline_16: value=16\nline_17: value=17\nline_18: value=18\nline_19: value=19\nline_20: value=20\nline_21: value=21\nline_22: value=22\nline_23: value=23\nline_24: value=24\nline_25: value=25\nline_26: value=26\nline_27: value=27\nline_28: value=28\nline_29: value=29\nline_30: value=30\nline_31: value=31\nline_32: value=32\nline_33: value=33\nline_34: value=34\nline_35: value=35\nline_36: value=36\nline_37: value=37\nline_38: value=38\nline_39: value=39\nline_40: value=40\nline_41: value=41\nline_42: value=42\nline_43: value=43\nline_44: value=44\nline_45: value=45\nline_46: value=46\nline_47: value=47\nline_48: value=48\nline_49: value=49\nline_50: value=50\nline_51: value=51\nline_52: value=52\nline_53: value=53\nline_54: value=54\nline_55: value=55\nline_56: value=56\nline_57: value=57\nline_58: value=58\nline_59: value=59\nline_60: value=60\nline_61: value=61\nline_62: value=62\nline_63: value=63\nline_64: value=64\nline_65: value=65\nline_66: value=66\nline_67: value=67\nline_68: value=68\nline_69: value=69\nline_70: value=70\nline_71: value=71\nline_72: value=72\nline_73: value=73\nline_74: value=74\nline_75: value=75\nline_76: value=76\nline_77: value=77\nline_78: value=78\nline_79: value=79\nline_80: value=80\nline_81: value=81\nline_82: value=82\nline_83: value=83\nline_84: value=84\nline_85: value=85\nline_86: value=86\nline_87: value=87\nline_88: value=88\nline_89: value=89\nline_90: value=90\nline_91: value=91\nline_92: value=92\nline_93: value=93\nline_94: value=94\nline_95: value=95\nline_96: value=96\nline_97: value=97\nline_98: value=98\nline_99: value=99\nline_100: value=100\nline_101: value=101\nline_102: value=102\nline_103: value=103\nline_104: value=104\nline_105: value=105\nline_106: value=106\nline_107: value=107\nline_108: value=108\n"
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_edit",
+              "arguments": {
+                "path": "gamma_mod_2.py",
+                "old_string": "REG_P2_HEAD",
+                "new_string": "REG_P2_EDITED"
+              }
+            }
+          ]
+        },
+        {
+          "content": "编辑完成,仅目标行变化。"
+        }
+      ],
+      "expect": {
+        "file_contains": {
+          "gamma_mod_2.py": "REG_P2_EDITED"
+        },
+        "file_unchanged_except": {
+          "gamma_mod_2.py": "KEEP_LINE_2 = True"
+        },
+        "final_contains": "编辑完成"
+      }
+    },
+    {
+      "task_id": "g_reg_p03",
+      "layer": "regression",
+      "kind": "positive",
+      "goal": "参数化正例 3:对 delta_mod_3.py 做基础文件操作。",
+      "files_hint": [
+        "delta_mod_3.py"
+      ],
+      "script": [
+        {
+          "tool_calls": [
+            {
+              "name": "file_write",
+              "arguments": {
+                "path": "delta_mod_3.py",
+                "content": "# REG_P3_HEAD\nKEEP_LINE_3 = True\nline_0: value=0\nline_1: value=1\nline_2: value=2\nline_3: value=3\nline_4: value=4\nline_5: value=5\nline_6: value=6\nline_7: value=7\nline_8: value=8\nline_9: value=9\nline_10: value=10\nline_11: value=11\nline_12: value=12\nline_13: value=13\nline_14: value=14\nline_15: value=15\nline_16: value=16\nline_17: value=17\nline_18: value=18\nline_19: value=19\nline_20: value=20\nline_21: value=21\nline_22: value=22\nline_23: value=23\nline_24: value=24\nline_25: value=25\nline_26: value=26\nline_27: value=27\nline_28: value=28\nline_29: value=29\nline_30: value=30\nline_31: value=31\nline_32: value=32\nline_33: value=33\nline_34: value=34\nline_35: value=35\nline_36: value=36\nline_37: value=37\nline_38: value=38\nline_39: value=39\nline_40: value=40\nline_41: value=41\nline_42: value=42\nline_43: value=43\nline_44: value=44\nline_45: value=45\nline_46: value=46\nline_47: value=47\n"
+              }
+            },
+            {
+              "name": "file_write",
+              "arguments": {
+                "path": "delta_extra_3.txt",
+                "content": "# REG_P3_HEAD\n"
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_list",
+              "arguments": {
+                "pattern": "delta_*"
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "grep_search",
+              "arguments": {
+                "pattern": "REG_P3_HEAD",
+                "path": "."
+              }
+            }
+          ]
+        },
+        {
+          "content": "多文件写入与搜索完成。"
+        }
+      ],
+      "expect": {
+        "files_created": [
+          "delta_mod_3.py",
+          "delta_extra_3.txt"
+        ],
+        "final_contains": "完成"
+      }
+    },
+    {
+      "task_id": "g_reg_p04",
+      "layer": "regression",
+      "kind": "positive",
+      "goal": "参数化正例 4:对 omega_mod_4.py 做基础文件操作。",
+      "files_hint": [
+        "omega_mod_4.py"
+      ],
+      "script": [
+        {
+          "tool_calls": [
+            {
+              "name": "file_write",
+              "arguments": {
+                "path": "omega_mod_4.py",
+                "content": "# REG_P4_HEAD\nKEEP_LINE_4 = True\nline_0: value=0\nline_1: value=1\nline_2: value=2\nline_3: value=3\nline_4: value=4\nline_5: value=5\nline_6: value=6\nline_7: value=7\nline_8: value=8\nline_9: value=9\nline_10: value=10\nline_11: value=11\nline_12: value=12\nline_13: value=13\nline_14: value=14\nline_15: value=15\nline_16: value=16\nline_17: value=17\nline_18: value=18\nline_19: value=19\nline_20: value=20\nline_21: value=21\nline_22: value=22\nline_23: value=23\nline_24: value=24\nline_25: value=25\nline_26: value=26\nline_27: value=27\nline_28: value=28\nline_29: value=29\nline_30: value=30\nline_31: value=31\nline_32: value=32\nline_33: value=33\nline_34: value=34\nline_35: value=35\nline_36: value=36\nline_37: value=37\nline_38: value=38\nline_39: value=39\nline_40: value=40\nline_41: value=41\nline_42: value=42\nline_43: value=43\nline_44: value=44\nline_45: value=45\nline_46: value=46\nline_47: value=47\nline_48: value=48\nline_49: value=49\nline_50: value=50\nline_51: value=51\nline_52: value=52\nline_53: value=53\nline_54: value=54\nline_55: value=55\nline_56: value=56\nline_57: value=57\nline_58: value=58\nline_59: value=59\nline_60: value=60\nline_61: value=61\nline_62: value=62\nline_63: value=63\nline_64: value=64\nline_65: value=65\nline_66: value=66\nline_67: value=67\nline_68: value=68\nline_69: value=69\n"
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "omega_mod_4.py",
+                "offset": 0,
+                "limit": 31
+              }
+            }
+          ]
+        },
+        {
+          "content": "已创建并读回 omega_mod_4.py。"
+        }
+      ],
+      "expect": {
+        "files_created": [
+          "omega_mod_4.py"
+        ],
+        "final_contains": "omega_mod_4.py"
+      }
+    },
+    {
+      "task_id": "g_reg_p05",
+      "layer": "regression",
+      "kind": "positive",
+      "goal": "参数化正例 5:对 kappa_mod_5.py 做基础文件操作。",
+      "files_hint": [
+        "kappa_mod_5.py"
+      ],
+      "script": [
+        {
+          "tool_calls": [
+            {
+              "name": "file_write",
+              "arguments": {
+                "path": "pkg_5/src/kappa_mod_5.py",
+                "content": "# REG_P5_HEAD\nKEEP_LINE_5 = True\nline_0: value=0\nline_1: value=1\nline_2: value=2\nline_3: value=3\nline_4: value=4\nline_5: value=5\nline_6: value=6\nline_7: value=7\nline_8: value=8\nline_9: value=9\nline_10: value=10\nline_11: value=11\nline_12: value=12\nline_13: value=13\nline_14: value=14\nline_15: value=15\nline_16: value=16\nline_17: value=17\nline_18: value=18\nline_19: value=19\nline_20: value=20\nline_21: value=21\nline_22: value=22\nline_23: value=23\nline_24: value=24\nline_25: value=25\nline_26: value=26\nline_27: value=27\nline_28: value=28\nline_29: value=29\nline_30: value=30\nline_31: value=31\nline_32: value=32\nline_33: value=33\nline_34: value=34\nline_35: value=35\nline_36: value=36\nline_37: value=37\nline_38: value=38\nline_39: value=39\nline_40: value=40\nline_41: value=41\nline_42: value=42\nline_43: value=43\nline_44: value=44\nline_45: value=45\nline_46: value=46\nline_47: value=47\nline_48: value=48\nline_49: value=49\nline_50: value=50\nline_51: value=51\nline_52: value=52\nline_53: value=53\nline_54: value=54\nline_55: value=55\nline_56: value=56\nline_57: value=57\nline_58: value=58\nline_59: value=59\nline_60: value=60\nline_61: value=61\nline_62: value=62\nline_63: value=63\nline_64: value=64\nline_65: value=65\nline_66: value=66\nline_67: value=67\nline_68: value=68\nline_69: value=69\nline_70: value=70\nline_71: value=71\nline_72: value=72\nline_73: value=73\nline_74: value=74\nline_75: value=75\nline_76: value=76\nline_77: value=77\nline_78: value=78\nline_79: value=79\nline_80: value=80\nline_81: value=81\n"
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "pkg_5/src/kappa_mod_5.py",
+                "offset": 0,
+                "limit": 20
+              }
+            }
+          ]
+        },
+        {
+          "content": "嵌套路径 pkg_5/src/kappa_mod_5.py 处理完成。"
+        }
+      ],
+      "expect": {
+        "files_created": [
+          "pkg_5/src/kappa_mod_5.py"
+        ],
+        "final_contains": "完成"
+      }
+    },
+    {
+      "task_id": "g_reg_p06",
+      "layer": "regression",
+      "kind": "positive",
+      "goal": "参数化正例 6:对 sigma_mod_6.py 做基础文件操作。",
+      "files_hint": [
+        "sigma_mod_6.py"
+      ],
+      "script": [
+        {
+          "tool_calls": [
+            {
+              "name": "file_write",
+              "arguments": {
+                "path": "sigma_mod_6.py",
+                "content": "# REG_P6_HEAD\nKEEP_LINE_6 = True\nline_0: value=0\nline_1: value=1\nline_2: value=2\nline_3: value=3\nline_4: value=4\nline_5: value=5\nline_6: value=6\nline_7: value=7\nline_8: value=8\nline_9: value=9\nline_10: value=10\nline_11: value=11\nline_12: value=12\nline_13: value=13\nline_14: value=14\nline_15: value=15\nline_16: value=16\nline_17: value=17\nline_18: value=18\nline_19: value=19\nline_20: value=20\nline_21: value=21\nline_22: value=22\nline_23: value=23\nline_24: value=24\nline_25: value=25\nline_26: value=26\nline_27: value=27\nline_28: value=28\nline_29: value=29\nline_30: value=30\nline_31: value=31\nline_32: value=32\nline_33: value=33\nline_34: value=34\nline_35: value=35\nline_36: value=36\nline_37: value=37\nline_38: value=38\nline_39: value=39\nline_40: value=40\nline_41: value=41\nline_42: value=42\nline_43: value=43\nline_44: value=44\nline_45: value=45\nline_46: value=46\nline_47: value=47\nline_48: value=48\nline_49: value=49\nline_50: value=50\nline_51: value=51\nline_52: value=52\nline_53: value=53\nline_54: value=54\nline_55: value=55\nline_56: value=56\nline_57: value=57\nline_58: value=58\nline_59: value=59\nline_60: value=60\nline_61: value=61\nline_62: value=62\nline_63: value=63\nline_64: value=64\nline_65: value=65\nline_66: value=66\nline_67: value=67\nline_68: value=68\nline_69: value=69\nline_70: value=70\nline_71: value=71\nline_72: value=72\nline_73: value=73\nline_74: value=74\nline_75: value=75\nline_76: value=76\nline_77: value=77\nline_78: value=78\nline_79: value=79\nline_80: value=80\nline_81: value=81\nline_82: value=82\nline_83: value=83\nline_84: value=84\nline_85: value=85\nline_86: value=86\nline_87: value=87\nline_88: value=88\nline_89: value=89\nline_90: value=90\nline_91: value=91\nline_92: value=92\nline_93: value=93\nline_94: value=94\nline_95: value=95\nline_96: value=96\nline_97: value=97\nline_98: value=98\nline_99: value=99\nline_100: value=100\nline_101: value=101\nline_102: value=102\nline_103: value=103\nline_104: value=104\nline_105: value=105\nline_106: value=106\nline_107: value=107\nline_108: value=108\nline_109: value=109\nline_110: value=110\nline_111: value=111\nline_112: value=112\nline_113: value=113\nline_114: value=114\nline_115: value=115\nline_116: value=116\nline_117: value=117\nline_118: value=118\n"
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_edit",
+              "arguments": {
+                "path": "sigma_mod_6.py",
+                "old_string": "REG_P6_HEAD",
+                "new_string": "REG_P6_EDITED"
+              }
+            }
+          ]
+        },
+        {
+          "content": "编辑完成,仅目标行变化。"
+        }
+      ],
+      "expect": {
+        "file_contains": {
+          "sigma_mod_6.py": "REG_P6_EDITED"
+        },
+        "file_unchanged_except": {
+          "sigma_mod_6.py": "KEEP_LINE_6 = True"
+        },
+        "final_contains": "编辑完成"
+      }
+    },
+    {
+      "task_id": "g_reg_p07",
+      "layer": "regression",
+      "kind": "positive",
+      "goal": "参数化正例 7:对 lambda_mod_7.py 做基础文件操作。",
+      "files_hint": [
+        "lambda_mod_7.py"
+      ],
+      "script": [
+        {
+          "tool_calls": [
+            {
+              "name": "file_write",
+              "arguments": {
+                "path": "lambda_mod_7.py",
+                "content": "# REG_P7_HEAD\nKEEP_LINE_7 = True\nline_0: value=0\nline_1: value=1\nline_2: value=2\nline_3: value=3\nline_4: value=4\nline_5: value=5\nline_6: value=6\nline_7: value=7\nline_8: value=8\nline_9: value=9\nline_10: value=10\nline_11: value=11\nline_12: value=12\nline_13: value=13\nline_14: value=14\nline_15: value=15\nline_16: value=16\nline_17: value=17\nline_18: value=18\nline_19: value=19\nline_20: value=20\nline_21: value=21\nline_22: value=22\nline_23: value=23\nline_24: value=24\nline_25: value=25\nline_26: value=26\nline_27: value=27\nline_28: value=28\nline_29: value=29\nline_30: value=30\nline_31: value=31\nline_32: value=32\nline_33: value=33\nline_34: value=34\nline_35: value=35\nline_36: value=36\nline_37: value=37\nline_38: value=38\nline_39: value=39\nline_40: value=40\nline_41: value=41\nline_42: value=42\nline_43: value=43\nline_44: value=44\nline_45: value=45\nline_46: value=46\nline_47: value=47\nline_48: value=48\nline_49: value=49\nline_50: value=50\nline_51: value=51\n"
+              }
+            },
+            {
+              "name": "file_write",
+              "arguments": {
+                "path": "lambda_extra_7.txt",
+                "content": "# REG_P7_HEAD\n"
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_list",
+              "arguments": {
+                "pattern": "lambda_*"
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "grep_search",
+              "arguments": {
+                "pattern": "REG_P7_HEAD",
+                "path": "."
+              }
+            }
+          ]
+        },
+        {
+          "content": "多文件写入与搜索完成。"
+        }
+      ],
+      "expect": {
+        "files_created": [
+          "lambda_mod_7.py",
+          "lambda_extra_7.txt"
+        ],
+        "final_contains": "完成"
+      }
+    },
+    {
+      "task_id": "g_reg_n00_read_missing",
+      "layer": "regression",
+      "kind": "negative",
+      "goal": "读取不存在的 missing_sigma.txt(应优雅失败,不崩溃)。",
+      "files_hint": [
+        "missing_sigma.txt"
+      ],
+      "script": [
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "missing_sigma.txt"
+              }
+            }
+          ]
+        },
+        {
+          "content": "目标文件不存在,已优雅处理。"
+        }
+      ],
+      "expect": {
+        "should_fail_call": "file_read"
+      }
+    },
+    {
+      "task_id": "g_reg_n01_edit_no_match",
+      "layer": "regression",
+      "kind": "negative",
+      "goal": "edit 的 old_string 在文件中不存在(应报错且文件不变)。",
+      "files_hint": [
+        "app_n1.py"
+      ],
+      "setup_files": {
+        "app_n1.py": "VERSION = 1\nNAME = core\n"
+      },
+      "script": [
+        {
+          "tool_calls": [
+            {
+              "name": "file_edit",
+              "arguments": {
+                "path": "app_n1.py",
+                "old_string": "NOT_PRESENT_STRING",
+                "new_string": "X"
+              }
+            }
+          ]
+        },
+        {
+          "content": "替换目标不存在,已报告错误。"
+        }
+      ],
+      "expect": {
+        "should_fail_call": "file_edit",
+        "file_equals": {
+          "app_n1.py": "VERSION = 1\nNAME = core\n"
+        }
+      }
+    },
+    {
+      "task_id": "g_reg_n02_edit_ambiguous",
+      "layer": "regression",
+      "kind": "negative",
+      "goal": "edit 的 old_string 出现两次且未设 replace_all(应拒绝,文件不变)。",
+      "files_hint": [
+        "app_n2.py"
+      ],
+      "setup_files": {
+        "app_n2.py": "TAG = a\nTAG = a\n"
+      },
+      "script": [
+        {
+          "tool_calls": [
+            {
+              "name": "file_edit",
+              "arguments": {
+                "path": "app_n2.py",
+                "old_string": "TAG = a",
+                "new_string": "TAG = b"
+              }
+            }
+          ]
+        },
+        {
+          "content": "待替换串非唯一,已拒绝执行。"
+        }
+      ],
+      "expect": {
+        "should_fail_call": "file_edit",
+        "file_equals": {
+          "app_n2.py": "TAG = a\nTAG = a\n"
+        }
+      }
+    },
+    {
+      "task_id": "g_reg_n03_unknown_param",
+      "layer": "regression",
+      "kind": "negative",
+      "goal": "file_read 携带未知参数 bogus(参数校验应拦截)。",
+      "files_hint": [
+        "a.py"
+      ],
+      "script": [
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "a.py",
+                "bogus": 1
+              }
+            }
+          ]
+        },
+        {
+          "content": "非法参数已被拦截。"
+        }
+      ],
+      "expect": {
+        "should_fail_call": "file_read",
+        "no_files_created": [
+          "a.py"
+        ]
+      }
+    },
+    {
+      "task_id": "g_reg_b00_empty_file",
+      "layer": "regression",
+      "kind": "boundary",
+      "goal": "创建并读取空文件(读取应为空而非报错)。",
+      "files_hint": [
+        "empty.txt"
+      ],
+      "script": [
+        {
+          "tool_calls": [
+            {
+              "name": "file_write",
+              "arguments": {
+                "path": "empty.txt",
+                "content": ""
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "empty.txt"
+              }
+            }
+          ]
+        },
+        {
+          "content": "空文件创建并读取成功。"
+        }
+      ],
+      "expect": {
+        "file_equals": {
+          "empty.txt": ""
+        },
+        "final_contains": "空文件"
+      }
+    },
+    {
+      "task_id": "g_reg_b01_control_chars",
+      "layer": "regression",
+      "kind": "boundary",
+      "goal": "写入含控制字符的内容并读回(errors=replace 不炸)。",
+      "files_hint": [
+        "ctl.bin"
+      ],
+      "script": [
+        {
+          "tool_calls": [
+            {
+              "name": "file_write",
+              "arguments": {
+                "path": "ctl.bin",
+                "content": "CTL\u0000\u0001\u0002END\n"
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "ctl.bin"
+              }
+            }
+          ]
+        },
+        {
+          "content": "控制字符内容往返完成。"
+        }
+      ],
+      "expect": {
+        "file_equals": {
+          "ctl.bin": "CTL\u0000\u0001\u0002END\n"
+        },
+        "final_contains": "往返"
+      }
+    },
+    {
+      "task_id": "g_reg_b02_deep_path",
+      "layer": "regression",
+      "kind": "boundary",
+      "goal": "在 5 层深的嵌套目录写文件并读回(递归建目录)。",
+      "files_hint": [
+        "lvl1/lvl2/lvl3/lvl4/lvl5/deep.txt"
+      ],
+      "script": [
+        {
+          "tool_calls": [
+            {
+              "name": "file_write",
+              "arguments": {
+                "path": "lvl1/lvl2/lvl3/lvl4/lvl5/deep.txt",
+                "content": "deep content\n"
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "lvl1/lvl2/lvl3/lvl4/lvl5/deep.txt"
+              }
+            }
+          ]
+        },
+        {
+          "content": "深路径写入读取完成。"
+        }
+      ],
+      "expect": {
+        "files_created": [
+          "lvl1/lvl2/lvl3/lvl4/lvl5/deep.txt"
+        ],
+        "file_contains": {
+          "lvl1/lvl2/lvl3/lvl4/lvl5/deep.txt": "deep content"
+        }
+      }
+    },
+    {
+      "task_id": "g_ctx_c00",
+      "layer": "context",
+      "kind": "positive",
+      "goal": "通读 ctx_alpha_0.py(1200 行)并做多轮检索(长上下文+保留率探针)。",
+      "files_hint": [
+        "ctx_alpha_0.py"
+      ],
+      "generate_files": {
+        "ctx_alpha_0.py": {
+          "kind": "functions",
+          "count": 1200,
+          "probes": [
+            "PRB00K0",
+            "PRB00K1"
+          ]
+        }
+      },
+      "script": [
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "ctx_alpha_0.py",
+                "offset": 0,
+                "limit": 200
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "ctx_alpha_0.py",
+                "offset": 1100,
+                "limit": 120
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "grep_search",
+              "arguments": {
+                "pattern": "def func_[12][0-9]",
+                "path": "ctx_alpha_0.py"
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "ctx_alpha_0.py",
+                "offset": 1050,
+                "limit": 120
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "ctx_alpha_0.py",
+                "offset": 700,
+                "limit": 200
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "grep_search",
+              "arguments": {
+                "pattern": "return ",
+                "path": "ctx_alpha_0.py"
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "ctx_alpha_0.py",
+                "offset": 900,
+                "limit": 200
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "ctx_alpha_0.py",
+                "offset": 100,
+                "limit": 120
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "grep_search",
+              "arguments": {
+                "pattern": "def func_[12][0-9]",
+                "path": "ctx_alpha_0.py"
+              }
+            }
+          ]
+        },
+        {
+          "content": "长上下文任务 g_ctx_c00 完成。"
+        }
+      ],
+      "expect": {
+        "final_contains": "完成",
+        "probe_contains": [
+          "PRB00K0",
+          "PRB00K1"
+        ],
+        "fold_min": 4
+      }
+    },
+    {
+      "task_id": "g_ctx_c01",
+      "layer": "context",
+      "kind": "positive",
+      "goal": "通读 ctx_beta_1.log(500 行)并做多轮检索(长上下文+保留率探针)。",
+      "files_hint": [
+        "ctx_beta_1.log"
+      ],
+      "generate_files": {
+        "ctx_beta_1.log": {
+          "kind": "logs",
+          "count": 500,
+          "probes": [
+            "PRB01K0",
+            "PRB01K1"
+          ]
+        }
+      },
+      "script": [
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "ctx_beta_1.log",
+                "offset": 0,
+                "limit": 200
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "ctx_beta_1.log",
+                "offset": 450,
+                "limit": 120
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "grep_search",
+              "arguments": {
+                "pattern": "timeout",
+                "path": "ctx_beta_1.log"
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "ctx_beta_1.log",
+                "offset": 300,
+                "limit": 200
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "ctx_beta_1.log",
+                "offset": 50,
+                "limit": 200
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "grep_search",
+              "arguments": {
+                "pattern": "ERROR",
+                "path": "ctx_beta_1.log"
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "ctx_beta_1.log",
+                "offset": 400,
+                "limit": 200
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "ctx_beta_1.log",
+                "offset": 300,
+                "limit": 200
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "grep_search",
+              "arguments": {
+                "pattern": "timeout",
+                "path": "ctx_beta_1.log"
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "ctx_beta_1.log",
+                "offset": 300,
+                "limit": 80
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "ctx_beta_1.log",
+                "offset": 450,
+                "limit": 120
+              }
+            }
+          ]
+        },
+        {
+          "content": "长上下文任务 g_ctx_c01 完成。"
+        }
+      ],
+      "expect": {
+        "final_contains": "完成",
+        "probe_contains": [
+          "PRB01K0",
+          "PRB01K1"
+        ],
+        "fold_min": 4
+      }
+    },
+    {
+      "task_id": "g_ctx_c02",
+      "layer": "context",
+      "kind": "positive",
+      "goal": "通读 ctx_gamma_2.py(1200 行)并做多轮检索(长上下文+保留率探针)。",
+      "files_hint": [
+        "ctx_gamma_2.py"
+      ],
+      "generate_files": {
+        "ctx_gamma_2.py": {
+          "kind": "functions",
+          "count": 1200,
+          "probes": [
+            "PRB02K0",
+            "PRB02K1"
+          ]
+        }
+      },
+      "script": [
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "ctx_gamma_2.py",
+                "offset": 0,
+                "limit": 200
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "ctx_gamma_2.py",
+                "offset": 450,
+                "limit": 80
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "grep_search",
+              "arguments": {
+                "pattern": "def func_",
+                "path": "ctx_gamma_2.py"
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "ctx_gamma_2.py",
+                "offset": 450,
+                "limit": 200
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "ctx_gamma_2.py",
+                "offset": 1150,
+                "limit": 200
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "grep_search",
+              "arguments": {
+                "pattern": "def func_",
+                "path": "ctx_gamma_2.py"
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "ctx_gamma_2.py",
+                "offset": 500,
+                "limit": 120
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "ctx_gamma_2.py",
+                "offset": 650,
+                "limit": 80
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "grep_search",
+              "arguments": {
+                "pattern": "def func_",
+                "path": "ctx_gamma_2.py"
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "ctx_gamma_2.py",
+                "offset": 250,
+                "limit": 120
+              }
+            }
+          ]
+        },
+        {
+          "content": "长上下文任务 g_ctx_c02 完成。"
+        }
+      ],
+      "expect": {
+        "final_contains": "完成",
+        "probe_contains": [
+          "PRB02K0",
+          "PRB02K1"
+        ],
+        "fold_min": 4
+      }
+    },
+    {
+      "task_id": "g_ctx_c03",
+      "layer": "context",
+      "kind": "boundary",
+      "goal": "通读 ctx_delta_3.log(500 行)并做多轮检索(长上下文+保留率探针)。",
+      "files_hint": [
+        "ctx_delta_3.log"
+      ],
+      "generate_files": {
+        "ctx_delta_3.log": {
+          "kind": "logs",
+          "count": 500,
+          "probes": [
+            "PRB03K0",
+            "PRB03K1"
+          ]
+        }
+      },
+      "script": [
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "ctx_delta_3.log",
+                "offset": 0,
+                "limit": 200
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "ctx_delta_3.log",
+                "offset": 200,
+                "limit": 120
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "grep_search",
+              "arguments": {
+                "pattern": "WARN",
+                "path": "ctx_delta_3.log"
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "ctx_delta_3.log",
+                "offset": 300,
+                "limit": 80
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "ctx_delta_3.log",
+                "offset": 300,
+                "limit": 120
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "grep_search",
+              "arguments": {
+                "pattern": "INFO",
+                "path": "ctx_delta_3.log"
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "ctx_delta_3.log",
+                "offset": 50,
+                "limit": 200
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "ctx_delta_3.log",
+                "offset": 0,
+                "limit": 120
+              }
+            }
+          ]
+        },
+        {
+          "content": "长上下文任务 g_ctx_c03 完成。"
+        }
+      ],
+      "expect": {
+        "final_contains": "完成",
+        "probe_contains": [
+          "PRB03K0",
+          "PRB03K1"
+        ],
+        "fold_min": 4
+      },
+      "budget_edge": true
+    },
+    {
+      "task_id": "g_ctx_c04",
+      "layer": "context",
+      "kind": "positive",
+      "goal": "通读 ctx_omega_4.py(300 行)并做多轮检索(长上下文+保留率探针)。",
+      "files_hint": [
+        "ctx_omega_4.py"
+      ],
+      "generate_files": {
+        "ctx_omega_4.py": {
+          "kind": "functions",
+          "count": 300,
+          "probes": [
+            "PRB04K0",
+            "PRB04K1"
+          ]
+        }
+      },
+      "script": [
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "ctx_omega_4.py",
+                "offset": 0,
+                "limit": 200
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "ctx_omega_4.py",
+                "offset": 250,
+                "limit": 80
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "grep_search",
+              "arguments": {
+                "pattern": "def func_[12][0-9]",
+                "path": "ctx_omega_4.py"
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "ctx_omega_4.py",
+                "offset": 200,
+                "limit": 200
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "ctx_omega_4.py",
+                "offset": 250,
+                "limit": 80
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "grep_search",
+              "arguments": {
+                "pattern": "return ",
+                "path": "ctx_omega_4.py"
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "ctx_omega_4.py",
+                "offset": 250,
+                "limit": 200
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "ctx_omega_4.py",
+                "offset": 200,
+                "limit": 120
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "grep_search",
+              "arguments": {
+                "pattern": "def func_",
+                "path": "ctx_omega_4.py"
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "ctx_omega_4.py",
+                "offset": 200,
+                "limit": 200
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "ctx_omega_4.py",
+                "offset": 0,
+                "limit": 200
+              }
+            }
+          ]
+        },
+        {
+          "content": "长上下文任务 g_ctx_c04 完成。"
+        }
+      ],
+      "expect": {
+        "final_contains": "完成",
+        "probe_contains": [
+          "PRB04K0",
+          "PRB04K1"
+        ],
+        "fold_min": 4
+      }
+    },
+    {
+      "task_id": "g_ctx_c05",
+      "layer": "context",
+      "kind": "positive",
+      "goal": "通读 ctx_kappa_5.log(1200 行)并做多轮检索(长上下文+保留率探针)。",
+      "files_hint": [
+        "ctx_kappa_5.log"
+      ],
+      "generate_files": {
+        "ctx_kappa_5.log": {
+          "kind": "logs",
+          "count": 1200,
+          "probes": [
+            "PRB05K0",
+            "PRB05K1"
+          ]
+        }
+      },
+      "script": [
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "ctx_kappa_5.log",
+                "offset": 0,
+                "limit": 200
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "ctx_kappa_5.log",
+                "offset": 550,
+                "limit": 200
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "grep_search",
+              "arguments": {
+                "pattern": "WARN",
+                "path": "ctx_kappa_5.log"
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "ctx_kappa_5.log",
+                "offset": 1100,
+                "limit": 200
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "ctx_kappa_5.log",
+                "offset": 650,
+                "limit": 120
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "grep_search",
+              "arguments": {
+                "pattern": "ERROR",
+                "path": "ctx_kappa_5.log"
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "ctx_kappa_5.log",
+                "offset": 650,
+                "limit": 200
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "ctx_kappa_5.log",
+                "offset": 800,
+                "limit": 200
+              }
+            }
+          ]
+        },
+        {
+          "content": "长上下文任务 g_ctx_c05 完成。"
+        }
+      ],
+      "expect": {
+        "final_contains": "完成",
+        "probe_contains": [
+          "PRB05K0",
+          "PRB05K1"
+        ],
+        "fold_min": 4
+      }
+    },
+    {
+      "task_id": "g_ctx_c06",
+      "layer": "context",
+      "kind": "boundary",
+      "goal": "通读 ctx_sigma_6.py(1200 行)并做多轮检索(长上下文+保留率探针)。",
+      "files_hint": [
+        "ctx_sigma_6.py"
+      ],
+      "generate_files": {
+        "ctx_sigma_6.py": {
+          "kind": "functions",
+          "count": 1200,
+          "probes": [
+            "PRB06K0",
+            "PRB06K1"
+          ]
+        }
+      },
+      "script": [
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "ctx_sigma_6.py",
+                "offset": 0,
+                "limit": 200
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "ctx_sigma_6.py",
+                "offset": 0,
+                "limit": 200
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "grep_search",
+              "arguments": {
+                "pattern": "def func_[12][0-9]",
+                "path": "ctx_sigma_6.py"
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "ctx_sigma_6.py",
+                "offset": 400,
+                "limit": 200
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "ctx_sigma_6.py",
+                "offset": 500,
+                "limit": 80
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "grep_search",
+              "arguments": {
+                "pattern": "def func_[12][0-9]",
+                "path": "ctx_sigma_6.py"
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "ctx_sigma_6.py",
+                "offset": 650,
+                "limit": 200
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "ctx_sigma_6.py",
+                "offset": 750,
+                "limit": 120
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "grep_search",
+              "arguments": {
+                "pattern": "def func_",
+                "path": "ctx_sigma_6.py"
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "ctx_sigma_6.py",
+                "offset": 1050,
+                "limit": 120
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "ctx_sigma_6.py",
+                "offset": 950,
+                "limit": 80
+              }
+            }
+          ]
+        },
+        {
+          "content": "长上下文任务 g_ctx_c06 完成。"
+        }
+      ],
+      "expect": {
+        "final_contains": "完成",
+        "probe_contains": [
+          "PRB06K0",
+          "PRB06K1"
+        ],
+        "fold_min": 5
+      }
+    },
+    {
+      "task_id": "g_ctx_c07",
+      "layer": "context",
+      "kind": "boundary",
+      "goal": "通读 ctx_lambda_7.log(500 行)并做多轮检索(长上下文+保留率探针)。",
+      "files_hint": [
+        "ctx_lambda_7.log"
+      ],
+      "generate_files": {
+        "ctx_lambda_7.log": {
+          "kind": "logs",
+          "count": 500,
+          "probes": [
+            "PRB07K0",
+            "PRB07K1"
+          ]
+        }
+      },
+      "script": [
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "ctx_lambda_7.log",
+                "offset": 0,
+                "limit": 200
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "ctx_lambda_7.log",
+                "offset": 100,
+                "limit": 80
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "grep_search",
+              "arguments": {
+                "pattern": "timeout",
+                "path": "ctx_lambda_7.log"
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "ctx_lambda_7.log",
+                "offset": 0,
+                "limit": 80
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "ctx_lambda_7.log",
+                "offset": 100,
+                "limit": 120
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "grep_search",
+              "arguments": {
+                "pattern": "INFO",
+                "path": "ctx_lambda_7.log"
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "ctx_lambda_7.log",
+                "offset": 200,
+                "limit": 120
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "ctx_lambda_7.log",
+                "offset": 50,
+                "limit": 200
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "grep_search",
+              "arguments": {
+                "pattern": "timeout",
+                "path": "ctx_lambda_7.log"
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "ctx_lambda_7.log",
+                "offset": 0,
+                "limit": 120
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "ctx_lambda_7.log",
+                "offset": 350,
+                "limit": 120
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "grep_search",
+              "arguments": {
+                "pattern": "WARN",
+                "path": "ctx_lambda_7.log"
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "ctx_lambda_7.log",
+                "offset": 100,
+                "limit": 80
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "ctx_lambda_7.log",
+                "offset": 300,
+                "limit": 80
+              }
+            }
+          ]
+        },
+        {
+          "content": "长上下文任务 g_ctx_c07 完成。"
+        }
+      ],
+      "expect": {
+        "final_contains": "完成",
+        "probe_contains": [
+          "PRB07K0",
+          "PRB07K1"
+        ],
+        "fold_min": 5
+      }
+    },
+    {
+      "task_id": "g_ctx_c08",
+      "layer": "context",
+      "kind": "positive",
+      "goal": "通读 ctx_alpha_8.py(1200 行)并做多轮检索(长上下文+保留率探针)。",
+      "files_hint": [
+        "ctx_alpha_8.py"
+      ],
+      "generate_files": {
+        "ctx_alpha_8.py": {
+          "kind": "functions",
+          "count": 1200,
+          "probes": [
+            "PRB08K0",
+            "PRB08K1"
+          ]
+        }
+      },
+      "script": [
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "ctx_alpha_8.py",
+                "offset": 0,
+                "limit": 200
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "ctx_alpha_8.py",
+                "offset": 950,
+                "limit": 200
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "grep_search",
+              "arguments": {
+                "pattern": "return ",
+                "path": "ctx_alpha_8.py"
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "ctx_alpha_8.py",
+                "offset": 350,
+                "limit": 80
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "ctx_alpha_8.py",
+                "offset": 850,
+                "limit": 200
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "grep_search",
+              "arguments": {
+                "pattern": "def func_",
+                "path": "ctx_alpha_8.py"
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "ctx_alpha_8.py",
+                "offset": 500,
+                "limit": 200
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "ctx_alpha_8.py",
+                "offset": 1100,
+                "limit": 120
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "grep_search",
+              "arguments": {
+                "pattern": "def func_",
+                "path": "ctx_alpha_8.py"
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "ctx_alpha_8.py",
+                "offset": 650,
+                "limit": 120
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "ctx_alpha_8.py",
+                "offset": 700,
+                "limit": 80
+              }
+            }
+          ]
+        },
+        {
+          "content": "长上下文任务 g_ctx_c08 完成。"
+        }
+      ],
+      "expect": {
+        "final_contains": "完成",
+        "probe_contains": [
+          "PRB08K0",
+          "PRB08K1"
+        ],
+        "fold_min": 4
+      }
+    },
+    {
+      "task_id": "g_ctx_c09",
+      "layer": "context",
+      "kind": "boundary",
+      "goal": "通读 ctx_beta_9.log(800 行)并做多轮检索(长上下文+保留率探针)。",
+      "files_hint": [
+        "ctx_beta_9.log"
+      ],
+      "generate_files": {
+        "ctx_beta_9.log": {
+          "kind": "logs",
+          "count": 800,
+          "probes": [
+            "PRB09K0",
+            "PRB09K1"
+          ]
+        }
+      },
+      "script": [
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "ctx_beta_9.log",
+                "offset": 0,
+                "limit": 200
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "ctx_beta_9.log",
+                "offset": 300,
+                "limit": 80
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "grep_search",
+              "arguments": {
+                "pattern": "ERROR",
+                "path": "ctx_beta_9.log"
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "ctx_beta_9.log",
+                "offset": 100,
+                "limit": 120
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "ctx_beta_9.log",
+                "offset": 550,
+                "limit": 200
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "grep_search",
+              "arguments": {
+                "pattern": "ERROR",
+                "path": "ctx_beta_9.log"
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "ctx_beta_9.log",
+                "offset": 50,
+                "limit": 200
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "ctx_beta_9.log",
+                "offset": 450,
+                "limit": 200
+              }
+            }
+          ]
+        },
+        {
+          "content": "长上下文任务 g_ctx_c09 完成。"
+        }
+      ],
+      "expect": {
+        "final_contains": "完成",
+        "probe_contains": [
+          "PRB09K0",
+          "PRB09K1"
+        ],
+        "fold_min": 4
+      },
+      "budget_edge": true
+    },
+    {
+      "task_id": "g_ctx_c10",
+      "layer": "context",
+      "kind": "positive",
+      "goal": "通读 ctx_gamma_10.py(300 行)并做多轮检索(长上下文+保留率探针)。",
+      "files_hint": [
+        "ctx_gamma_10.py"
+      ],
+      "generate_files": {
+        "ctx_gamma_10.py": {
+          "kind": "functions",
+          "count": 300,
+          "probes": [
+            "PRB10K0",
+            "PRB10K1"
+          ]
+        }
+      },
+      "script": [
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "ctx_gamma_10.py",
+                "offset": 0,
+                "limit": 200
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "ctx_gamma_10.py",
+                "offset": 250,
+                "limit": 80
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "grep_search",
+              "arguments": {
+                "pattern": "def func_",
+                "path": "ctx_gamma_10.py"
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "ctx_gamma_10.py",
+                "offset": 200,
+                "limit": 200
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "ctx_gamma_10.py",
+                "offset": 0,
+                "limit": 120
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "grep_search",
+              "arguments": {
+                "pattern": "def func_",
+                "path": "ctx_gamma_10.py"
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "ctx_gamma_10.py",
+                "offset": 100,
+                "limit": 120
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "ctx_gamma_10.py",
+                "offset": 50,
+                "limit": 80
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "grep_search",
+              "arguments": {
+                "pattern": "return ",
+                "path": "ctx_gamma_10.py"
+              }
+            }
+          ]
+        },
+        {
+          "content": "长上下文任务 g_ctx_c10 完成。"
+        }
+      ],
+      "expect": {
+        "final_contains": "完成",
+        "probe_contains": [
+          "PRB10K0",
+          "PRB10K1"
+        ],
+        "fold_min": 4
+      }
+    },
+    {
+      "task_id": "g_ctx_c11",
+      "layer": "context",
+      "kind": "positive",
+      "goal": "通读 ctx_delta_11.log(800 行)并做多轮检索(长上下文+保留率探针)。",
+      "files_hint": [
+        "ctx_delta_11.log"
+      ],
+      "generate_files": {
+        "ctx_delta_11.log": {
+          "kind": "logs",
+          "count": 800,
+          "probes": [
+            "PRB11K0",
+            "PRB11K1"
+          ]
+        }
+      },
+      "script": [
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "ctx_delta_11.log",
+                "offset": 0,
+                "limit": 200
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "ctx_delta_11.log",
+                "offset": 600,
+                "limit": 80
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "grep_search",
+              "arguments": {
+                "pattern": "WARN",
+                "path": "ctx_delta_11.log"
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "ctx_delta_11.log",
+                "offset": 250,
+                "limit": 200
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "ctx_delta_11.log",
+                "offset": 200,
+                "limit": 120
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "grep_search",
+              "arguments": {
+                "pattern": "ERROR",
+                "path": "ctx_delta_11.log"
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "ctx_delta_11.log",
+                "offset": 200,
+                "limit": 80
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "ctx_delta_11.log",
+                "offset": 100,
+                "limit": 80
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "grep_search",
+              "arguments": {
+                "pattern": "WARN",
+                "path": "ctx_delta_11.log"
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "ctx_delta_11.log",
+                "offset": 250,
+                "limit": 80
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "ctx_delta_11.log",
+                "offset": 550,
+                "limit": 80
+              }
+            }
+          ]
+        },
+        {
+          "content": "长上下文任务 g_ctx_c11 完成。"
+        }
+      ],
+      "expect": {
+        "final_contains": "完成",
+        "probe_contains": [
+          "PRB11K0",
+          "PRB11K1"
+        ],
+        "fold_min": 4
+      }
+    },
+    {
+      "task_id": "g_mem_parent_calc",
+      "layer": "memory",
+      "kind": "positive",
+      "goal": "实现 calc_mod.py,提供 calc_core 与 calc_helper。",
+      "files_hint": [
+        "calc_mod.py"
+      ],
+      "script": [
+        {
+          "tool_calls": [
+            {
+              "name": "file_write",
+              "arguments": {
+                "path": "calc_mod.py",
+                "content": "# MODULE:calc v1\ndef calc_core(x):\n    \"\"\"core operation v1\"\"\"\n    return x * 2 + 1\ndef calc_helper(y):\n    return y + 0\n"
+              }
+            }
+          ]
+        },
+        {
+          "content": "calc_mod.py 已实现。"
+        }
+      ],
+      "expect": {
+        "files_created": [
+          "calc_mod.py"
+        ]
+      }
+    },
+    {
+      "task_id": "g_mem_fresh_calc",
+      "layer": "memory",
+      "kind": "positive",
+      "goal": "follow-up(fresh):基于 calc_mod.py 编写 caller_fresh_calc.py。",
+      "files_hint": [
+        "calc_mod.py",
+        "caller_fresh_calc.py"
+      ],
+      "follow_up_of": "g_mem_parent_calc",
+      "memory_scenario": "fresh",
+      "script": [
+        {
+          "tool_calls": [
+            {
+              "name": "memory_query",
+              "arguments": {
+                "query": "calc",
+                "kind": "all"
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_write",
+              "arguments": {
+                "path": "caller_fresh_calc.py",
+                "content": "from calc import calc_core\nprint(calc_core(3))\n"
+              }
+            }
+          ]
+        },
+        {
+          "content": "已利用记忆完成 caller_fresh_calc.py,未重读 calc_mod.py。"
+        }
+      ],
+      "control_script": [
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "calc_mod.py"
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_write",
+              "arguments": {
+                "path": "caller_fresh_calc.py",
+                "content": "# control\nimport calc\n"
+              }
+            }
+          ]
+        },
+        {
+          "content": "对照组:重读后完成。"
+        }
+      ],
+      "expect": {
+        "files_created": [
+          "caller_fresh_calc.py"
+        ],
+        "file_contains": {
+          "caller_fresh_calc.py": "calc_core(3)"
+        }
+      }
+    },
+    {
+      "task_id": "g_mem_stale_calc",
+      "layer": "memory",
+      "kind": "boundary",
+      "goal": "follow-up(stale):基于 calc_mod.py 编写 caller_stale_calc.py。",
+      "files_hint": [
+        "calc_mod.py",
+        "caller_stale_calc.py"
+      ],
+      "follow_up_of": "g_mem_parent_calc",
+      "memory_scenario": "stale",
+      "script": [
+        {
+          "tool_calls": [
+            {
+              "name": "memory_query",
+              "arguments": {
+                "query": "calc",
+                "kind": "all"
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "calc_mod.py"
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_write",
+              "arguments": {
+                "path": "caller_stale_calc.py",
+                "content": "from calc import calc_core_v2\nprint(calc_core_v2(3))\n"
+              }
+            }
+          ]
+        },
+        {
+          "content": "检测到 calc_mod.py 摘要过期,已重读新版本完成 caller_stale_calc.py。"
+        }
+      ],
+      "control_script": [
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "calc_mod.py"
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_write",
+              "arguments": {
+                "path": "caller_stale_calc.py",
+                "content": "# control\nimport calc\n"
+              }
+            }
+          ]
+        },
+        {
+          "content": "对照组:重读后完成。"
+        }
+      ],
+      "expect": {
+        "files_created": [
+          "caller_stale_calc.py"
+        ],
+        "file_contains": {
+          "caller_stale_calc.py": "calc_core_v2(3)"
+        }
+      },
+      "scenario_mutate": {
+        "calc_mod.py": "# MODULE:calc v2\ndef calc_core_v2(x):\n    \"\"\"core operation v2\"\"\"\n    return x * 2 + 2\ndef calc_helper(y):\n    return y + 0\n"
+      }
+    },
+    {
+      "task_id": "g_mem_missing_calc",
+      "layer": "memory",
+      "kind": "boundary",
+      "goal": "follow-up(missing):基于 calc_mod.py 编写 caller_missing_calc.py。",
+      "files_hint": [
+        "calc_mod.py",
+        "caller_missing_calc.py"
+      ],
+      "follow_up_of": "g_mem_parent_calc",
+      "memory_scenario": "missing",
+      "script": [
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "calc_mod.py"
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_write",
+              "arguments": {
+                "path": "caller_missing_calc.py",
+                "content": "from calc import calc_core\nprint(calc_core(1))\n"
+              }
+            }
+          ]
+        },
+        {
+          "content": "记忆缺失,已优雅降级重读 calc_mod.py 完成 caller_missing_calc.py。"
+        }
+      ],
+      "control_script": [
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "calc_mod.py"
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_write",
+              "arguments": {
+                "path": "caller_missing_calc.py",
+                "content": "# control\nimport calc\n"
+              }
+            }
+          ]
+        },
+        {
+          "content": "对照组:重读后完成。"
+        }
+      ],
+      "expect": {
+        "files_created": [
+          "caller_missing_calc.py"
+        ],
+        "file_contains": {
+          "caller_missing_calc.py": "calc_core(1)"
+        }
+      },
+      "scenario_clear_memory": true
+    },
+    {
+      "task_id": "g_mem_parent_store",
+      "layer": "memory",
+      "kind": "positive",
+      "goal": "实现 store_mod.py,提供 store_core 与 store_helper。",
+      "files_hint": [
+        "store_mod.py"
+      ],
+      "script": [
+        {
+          "tool_calls": [
+            {
+              "name": "file_write",
+              "arguments": {
+                "path": "store_mod.py",
+                "content": "# MODULE:store v1\ndef store_core(x):\n    \"\"\"core operation v1\"\"\"\n    return x * 3 + 1\ndef store_helper(y):\n    return y + 1\n"
+              }
+            }
+          ]
+        },
+        {
+          "content": "store_mod.py 已实现。"
+        }
+      ],
+      "expect": {
+        "files_created": [
+          "store_mod.py"
+        ]
+      }
+    },
+    {
+      "task_id": "g_mem_stale_store",
+      "layer": "memory",
+      "kind": "boundary",
+      "goal": "follow-up(stale):基于 store_mod.py 编写 caller_stale_store.py。",
+      "files_hint": [
+        "store_mod.py",
+        "caller_stale_store.py"
+      ],
+      "follow_up_of": "g_mem_parent_store",
+      "memory_scenario": "stale",
+      "script": [
+        {
+          "tool_calls": [
+            {
+              "name": "memory_query",
+              "arguments": {
+                "query": "store",
+                "kind": "all"
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "store_mod.py"
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_write",
+              "arguments": {
+                "path": "caller_stale_store.py",
+                "content": "from store import store_core_v2\nprint(store_core_v2(3))\n"
+              }
+            }
+          ]
+        },
+        {
+          "content": "检测到 store_mod.py 摘要过期,已重读新版本完成 caller_stale_store.py。"
+        }
+      ],
+      "control_script": [
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "store_mod.py"
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_write",
+              "arguments": {
+                "path": "caller_stale_store.py",
+                "content": "# control\nimport store\n"
+              }
+            }
+          ]
+        },
+        {
+          "content": "对照组:重读后完成。"
+        }
+      ],
+      "expect": {
+        "files_created": [
+          "caller_stale_store.py"
+        ],
+        "file_contains": {
+          "caller_stale_store.py": "store_core_v2(3)"
+        }
+      },
+      "scenario_mutate": {
+        "store_mod.py": "# MODULE:store v2\ndef store_core_v2(x):\n    \"\"\"core operation v2\"\"\"\n    return x * 3 + 2\ndef store_helper(y):\n    return y + 1\n"
+      }
+    },
+    {
+      "task_id": "g_mem_wrong_store",
+      "layer": "memory",
+      "kind": "boundary",
+      "goal": "follow-up(wrong):基于 store_mod.py 编写 caller_wrong_store.py。",
+      "files_hint": [
+        "store_mod.py",
+        "caller_wrong_store.py"
+      ],
+      "follow_up_of": "g_mem_parent_store",
+      "memory_scenario": "wrong",
+      "script": [
+        {
+          "tool_calls": [
+            {
+              "name": "memory_query",
+              "arguments": {
+                "query": "store",
+                "kind": "all"
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_write",
+              "arguments": {
+                "path": "caller_wrong_store.py",
+                "content": "from store import store_core\nprint(store_core(2))\n"
+              }
+            }
+          ]
+        },
+        {
+          "content": "记忆命中含干扰项,已选用真实的 store_mod.py 完成 caller_wrong_store.py。"
+        }
+      ],
+      "control_script": [
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "store_mod.py"
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_write",
+              "arguments": {
+                "path": "caller_wrong_store.py",
+                "content": "# control\nimport store\n"
+              }
+            }
+          ]
+        },
+        {
+          "content": "对照组:重读后完成。"
+        }
+      ],
+      "expect": {
+        "files_created": [
+          "caller_wrong_store.py"
+        ],
+        "file_contains": {
+          "caller_wrong_store.py": "store_core(2)"
+        },
+        "file_not_contains": {
+          "caller_wrong_store.py": "DECOY"
+        },
+        "final_not_contains": "DECOY_MARK"
+      }
+    },
+    {
+      "task_id": "g_mem_missing_store",
+      "layer": "memory",
+      "kind": "boundary",
+      "goal": "follow-up(missing):基于 store_mod.py 编写 caller_missing_store.py。",
+      "files_hint": [
+        "store_mod.py",
+        "caller_missing_store.py"
+      ],
+      "follow_up_of": "g_mem_parent_store",
+      "memory_scenario": "missing",
+      "script": [
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "store_mod.py"
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_write",
+              "arguments": {
+                "path": "caller_missing_store.py",
+                "content": "from store import store_core\nprint(store_core(1))\n"
+              }
+            }
+          ]
+        },
+        {
+          "content": "记忆缺失,已优雅降级重读 store_mod.py 完成 caller_missing_store.py。"
+        }
+      ],
+      "control_script": [
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "store_mod.py"
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_write",
+              "arguments": {
+                "path": "caller_missing_store.py",
+                "content": "# control\nimport store\n"
+              }
+            }
+          ]
+        },
+        {
+          "content": "对照组:重读后完成。"
+        }
+      ],
+      "expect": {
+        "files_created": [
+          "caller_missing_store.py"
+        ],
+        "file_contains": {
+          "caller_missing_store.py": "store_core(1)"
+        }
+      },
+      "scenario_clear_memory": true
+    },
+    {
+      "task_id": "g_mem_parent_conv",
+      "layer": "memory",
+      "kind": "positive",
+      "goal": "实现 conv_mod.py,提供 conv_core 与 conv_helper。",
+      "files_hint": [
+        "conv_mod.py"
+      ],
+      "script": [
+        {
+          "tool_calls": [
+            {
+              "name": "file_write",
+              "arguments": {
+                "path": "conv_mod.py",
+                "content": "# MODULE:conv v1\ndef conv_core(x):\n    \"\"\"core operation v1\"\"\"\n    return x * 4 + 1\ndef conv_helper(y):\n    return y + 2\n"
+              }
+            }
+          ]
+        },
+        {
+          "content": "conv_mod.py 已实现。"
+        }
+      ],
+      "expect": {
+        "files_created": [
+          "conv_mod.py"
+        ]
+      }
+    },
+    {
+      "task_id": "g_mem_fresh_conv",
+      "layer": "memory",
+      "kind": "positive",
+      "goal": "follow-up(fresh):基于 conv_mod.py 编写 caller_fresh_conv.py。",
+      "files_hint": [
+        "conv_mod.py",
+        "caller_fresh_conv.py"
+      ],
+      "follow_up_of": "g_mem_parent_conv",
+      "memory_scenario": "fresh",
+      "script": [
+        {
+          "tool_calls": [
+            {
+              "name": "memory_query",
+              "arguments": {
+                "query": "conv",
+                "kind": "all"
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_write",
+              "arguments": {
+                "path": "caller_fresh_conv.py",
+                "content": "from conv import conv_core\nprint(conv_core(3))\n"
+              }
+            }
+          ]
+        },
+        {
+          "content": "已利用记忆完成 caller_fresh_conv.py,未重读 conv_mod.py。"
+        }
+      ],
+      "control_script": [
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "conv_mod.py"
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_write",
+              "arguments": {
+                "path": "caller_fresh_conv.py",
+                "content": "# control\nimport conv\n"
+              }
+            }
+          ]
+        },
+        {
+          "content": "对照组:重读后完成。"
+        }
+      ],
+      "expect": {
+        "files_created": [
+          "caller_fresh_conv.py"
+        ],
+        "file_contains": {
+          "caller_fresh_conv.py": "conv_core(3)"
+        }
+      }
+    },
+    {
+      "task_id": "g_mem_stale_conv",
+      "layer": "memory",
+      "kind": "boundary",
+      "goal": "follow-up(stale):基于 conv_mod.py 编写 caller_stale_conv.py。",
+      "files_hint": [
+        "conv_mod.py",
+        "caller_stale_conv.py"
+      ],
+      "follow_up_of": "g_mem_parent_conv",
+      "memory_scenario": "stale",
+      "script": [
+        {
+          "tool_calls": [
+            {
+              "name": "memory_query",
+              "arguments": {
+                "query": "conv",
+                "kind": "all"
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "conv_mod.py"
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_write",
+              "arguments": {
+                "path": "caller_stale_conv.py",
+                "content": "from conv import conv_core_v2\nprint(conv_core_v2(3))\n"
+              }
+            }
+          ]
+        },
+        {
+          "content": "检测到 conv_mod.py 摘要过期,已重读新版本完成 caller_stale_conv.py。"
+        }
+      ],
+      "control_script": [
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "conv_mod.py"
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_write",
+              "arguments": {
+                "path": "caller_stale_conv.py",
+                "content": "# control\nimport conv\n"
+              }
+            }
+          ]
+        },
+        {
+          "content": "对照组:重读后完成。"
+        }
+      ],
+      "expect": {
+        "files_created": [
+          "caller_stale_conv.py"
+        ],
+        "file_contains": {
+          "caller_stale_conv.py": "conv_core_v2(3)"
+        }
+      },
+      "scenario_mutate": {
+        "conv_mod.py": "# MODULE:conv v2\ndef conv_core_v2(x):\n    \"\"\"core operation v2\"\"\"\n    return x * 4 + 2\ndef conv_helper(y):\n    return y + 2\n"
+      }
+    },
+    {
+      "task_id": "g_mem_wrong_conv",
+      "layer": "memory",
+      "kind": "boundary",
+      "goal": "follow-up(wrong):基于 conv_mod.py 编写 caller_wrong_conv.py。",
+      "files_hint": [
+        "conv_mod.py",
+        "caller_wrong_conv.py"
+      ],
+      "follow_up_of": "g_mem_parent_conv",
+      "memory_scenario": "wrong",
+      "script": [
+        {
+          "tool_calls": [
+            {
+              "name": "memory_query",
+              "arguments": {
+                "query": "conv",
+                "kind": "all"
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_write",
+              "arguments": {
+                "path": "caller_wrong_conv.py",
+                "content": "from conv import conv_core\nprint(conv_core(2))\n"
+              }
+            }
+          ]
+        },
+        {
+          "content": "记忆命中含干扰项,已选用真实的 conv_mod.py 完成 caller_wrong_conv.py。"
+        }
+      ],
+      "control_script": [
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "conv_mod.py"
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_write",
+              "arguments": {
+                "path": "caller_wrong_conv.py",
+                "content": "# control\nimport conv\n"
+              }
+            }
+          ]
+        },
+        {
+          "content": "对照组:重读后完成。"
+        }
+      ],
+      "expect": {
+        "files_created": [
+          "caller_wrong_conv.py"
+        ],
+        "file_contains": {
+          "caller_wrong_conv.py": "conv_core(2)"
+        },
+        "file_not_contains": {
+          "caller_wrong_conv.py": "DECOY"
+        },
+        "final_not_contains": "DECOY_MARK"
+      }
+    },
+    {
+      "task_id": "g_res_a",
+      "layer": "resume",
+      "kind": "positive",
+      "goal": "分阶段构建 res_a/ 模块(中断/恢复/漂移场景)。",
+      "files_hint": [
+        "res_a/final.txt"
+      ],
+      "script": [
+        {
+          "tool_calls": [
+            {
+              "name": "file_write",
+              "arguments": {
+                "path": "res_a/part1.txt",
+                "content": "g_res_a part1 done\n"
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_write",
+              "arguments": {
+                "path": "res_a/part2.txt",
+                "content": "g_res_a part2 done\n"
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "res_a/part1.txt"
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_write",
+              "arguments": {
+                "path": "res_a/part3.txt",
+                "content": "g_res_a part3 done\n"
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_write",
+              "arguments": {
+                "path": "res_a/part4.txt",
+                "content": "g_res_a part4 done\n"
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_write",
+              "arguments": {
+                "path": "res_a/final.txt",
+                "content": "g_res_a final done\n"
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_list",
+              "arguments": {
+                "pattern": "res_a/*"
+              }
+            }
+          ]
+        },
+        {
+          "content": "g_res_a 模块构建完成。"
+        }
+      ],
+      "expect": {
+        "final_contains": "构建完成"
+      },
+      "resume": {
+        "stop_points": [
+          1,
+          3
+        ],
+        "final_files": [
+          "res_a/final.txt"
+        ],
+        "final_answer_contains": "构建完成",
+        "file_contains": {
+          "res_a/final.txt": "final done"
+        },
+        "drift_types": [
+          "content_change",
+          "whitespace_only",
+          "reformat",
+          "large_scale"
+        ]
+      }
+    },
+    {
+      "task_id": "g_res_b",
+      "layer": "resume",
+      "kind": "positive",
+      "goal": "分阶段构建 res_b/ 模块(中断/恢复/漂移场景)。",
+      "files_hint": [
+        "res_b/final.txt"
+      ],
+      "script": [
+        {
+          "tool_calls": [
+            {
+              "name": "file_write",
+              "arguments": {
+                "path": "res_b/part1.txt",
+                "content": "g_res_b part1 done\n"
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_write",
+              "arguments": {
+                "path": "res_b/part2.txt",
+                "content": "g_res_b part2 done\n"
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "res_b/part1.txt"
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_write",
+              "arguments": {
+                "path": "res_b/part3.txt",
+                "content": "g_res_b part3 done\n"
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_write",
+              "arguments": {
+                "path": "res_b/part4.txt",
+                "content": "g_res_b part4 done\n"
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_write",
+              "arguments": {
+                "path": "res_b/final.txt",
+                "content": "g_res_b final done\n"
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_list",
+              "arguments": {
+                "pattern": "res_b/*"
+              }
+            }
+          ]
+        },
+        {
+          "content": "g_res_b 模块构建完成。"
+        }
+      ],
+      "expect": {
+        "final_contains": "构建完成"
+      },
+      "resume": {
+        "stop_points": [
+          2,
+          4
+        ],
+        "final_files": [
+          "res_b/final.txt"
+        ],
+        "final_answer_contains": "构建完成",
+        "file_contains": {
+          "res_b/final.txt": "final done"
+        },
+        "drift_types": [
+          "content_change",
+          "whitespace_only",
+          "reformat",
+          "large_scale"
+        ]
+      }
+    },
+    {
+      "task_id": "g_res_c",
+      "layer": "resume",
+      "kind": "positive",
+      "goal": "分阶段构建 res_c/ 模块(中断/恢复/漂移场景)。",
+      "files_hint": [
+        "res_c/final.txt"
+      ],
+      "script": [
+        {
+          "tool_calls": [
+            {
+              "name": "file_write",
+              "arguments": {
+                "path": "res_c/part1.txt",
+                "content": "g_res_c part1 done\n"
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_write",
+              "arguments": {
+                "path": "res_c/part2.txt",
+                "content": "g_res_c part2 done\n"
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_read",
+              "arguments": {
+                "path": "res_c/part1.txt"
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_write",
+              "arguments": {
+                "path": "res_c/part3.txt",
+                "content": "g_res_c part3 done\n"
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_write",
+              "arguments": {
+                "path": "res_c/part4.txt",
+                "content": "g_res_c part4 done\n"
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_write",
+              "arguments": {
+                "path": "res_c/final.txt",
+                "content": "g_res_c final done\n"
+              }
+            }
+          ]
+        },
+        {
+          "tool_calls": [
+            {
+              "name": "file_list",
+              "arguments": {
+                "pattern": "res_c/*"
+              }
+            }
+          ]
+        },
+        {
+          "content": "g_res_c 模块构建完成。"
+        }
+      ],
+      "expect": {
+        "final_contains": "构建完成"
+      },
+      "resume": {
+        "stop_points": [
+          1,
+          2
+        ],
+        "final_files": [
+          "res_c/final.txt"
+        ],
+        "final_answer_contains": "构建完成",
+        "file_contains": {
+          "res_c/final.txt": "final done"
+        },
+        "drift_types": [
+          "content_change",
+          "whitespace_only",
+          "reformat",
+          "large_scale"
+        ]
+      }
+    }
+  ]
+}

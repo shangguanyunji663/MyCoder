@@ -115,6 +115,7 @@
     {
       "task_id": "t09_followup_use_utils",
       "layer": "memory",
+      "memory_scenario": "fresh_hit",
       "goal": "写 main.py 调用 utils 的 add(考察利用记忆而非重读文件)。",
       "files_hint": ["utils.py", "main.py"],
       "follow_up_of": "t08_build_utils",
@@ -145,6 +146,7 @@
     {
       "task_id": "t11_followup_use_config",
       "layer": "memory",
+      "memory_scenario": "fresh_hit",
       "goal": "写 boot.py 引用 config 的常量(考察利用记忆而非重读文件)。",
       "files_hint": ["config.py", "boot.py"],
       "follow_up_of": "t10_build_config",
@@ -176,7 +178,198 @@
         {"tool_calls": [{"name": "file_write", "arguments": {"path": "mod/step4.txt", "content": "step4 done\n"}}]},
         {"content": "模块构建完成。"}
       ],
-      "expect": {"final_contains": "构建完成"}
+      "expect": {"final_contains": "构建完成"},
+      "resume": {
+        "stop_points": [1, 2, 3],
+        "final_files": ["mod/step4.txt"],
+        "final_answer_contains": "构建完成",
+        "file_contains": {"mod/step4.txt": "step4 done"},
+        "drift_types": ["content_change", "whitespace_only", "reformat", "large_scale"]
+      }
+    },
+
+    {
+      "task_id": "t13n_read_missing_file",
+      "layer": "regression",
+      "kind": "negative",
+      "goal": "读取不存在的 ghost.txt(应报错且优雅降级,不崩溃)。",
+      "files_hint": ["ghost.txt"],
+      "script": [
+        {"tool_calls": [{"name": "file_read", "arguments": {"path": "ghost.txt"}}]},
+        {"content": "ghost.txt 不存在,已向用户报告该错误。"}
+      ],
+      "expect": {"should_fail_call": "file_read"}
+    },
+    {
+      "task_id": "t14n_edit_no_match",
+      "layer": "regression",
+      "kind": "negative",
+      "goal": "编辑 config.py 但 old_string 不存在(应报错且文件保持不变)。",
+      "files_hint": ["config.py"],
+      "setup_files": {"config.py": "DEBUG = True\nLEVEL = info\n"},
+      "script": [
+        {"tool_calls": [{"name": "file_edit", "arguments": {"path": "config.py", "old_string": "NOT_EXIST", "new_string": "x"}}]},
+        {"content": "替换目标不存在,操作失败已报告,文件未被破坏。"}
+      ],
+      "expect": {"should_fail_call": "file_edit", "file_equals": {"config.py": "DEBUG = True\nLEVEL = info\n"}}
+    },
+    {
+      "task_id": "t15n_edit_ambiguous",
+      "layer": "regression",
+      "kind": "negative",
+      "goal": "edit 的 old_string 出现两次且未设 replace_all(应拒绝,文件不变)。",
+      "files_hint": ["dup.py"],
+      "setup_files": {"dup.py": "MODE = fast\nMODE = fast\n"},
+      "script": [
+        {"tool_calls": [{"name": "file_edit", "arguments": {"path": "dup.py", "old_string": "MODE = fast", "new_string": "MODE = slow"}}]},
+        {"content": "待替换串非唯一,已拒绝执行,文件保持原样。"}
+      ],
+      "expect": {"should_fail_call": "file_edit", "file_equals": {"dup.py": "MODE = fast\nMODE = fast\n"}}
+    },
+    {
+      "task_id": "t16n_read_directory",
+      "layer": "regression",
+      "kind": "negative",
+      "goal": "把目录当文件读取 srcdir(应报错“目标是目录”)。",
+      "files_hint": ["srcdir"],
+      "setup_files": {"srcdir/.keep": ""},
+      "script": [
+        {"tool_calls": [{"name": "file_read", "arguments": {"path": "srcdir"}}]},
+        {"content": "目标是目录而非文件,已报告错误。"}
+      ],
+      "expect": {"should_fail_call": "file_read"}
+    },
+    {
+      "task_id": "t17n_missing_param",
+      "layer": "regression",
+      "kind": "negative",
+      "goal": "file_write 缺少必填参数 content(参数校验应拦截,不落盘)。",
+      "files_hint": ["half.py"],
+      "script": [
+        {"tool_calls": [{"name": "file_write", "arguments": {"path": "half.py"}}]},
+        {"content": "缺少必填参数,已被参数校验拦截。"}
+      ],
+      "expect": {"should_fail_call": "file_write", "no_files_created": ["half.py"]}
+    },
+    {
+      "task_id": "t18n_type_error",
+      "layer": "regression",
+      "kind": "negative",
+      "goal": "file_read 的 offset 传字符串(类型校验应拦截)。",
+      "files_hint": ["a.py"],
+      "setup_files": {"a.py": "x = 1\n"},
+      "script": [
+        {"tool_calls": [{"name": "file_read", "arguments": {"path": "a.py", "offset": "zero"}}]},
+        {"content": "参数类型错误,已被拦截。"}
+      ],
+      "expect": {"should_fail_call": "file_read"}
+    },
+    {
+      "task_id": "t19n_enum_invalid",
+      "layer": "regression",
+      "kind": "negative",
+      "goal": "memory_query 的 kind 传非法枚举值(enum 校验应拦截)。",
+      "script": [
+        {"tool_calls": [{"name": "memory_query", "arguments": {"query": "q", "kind": "nope"}}]},
+        {"content": "枚举越界,已被拦截。"}
+      ],
+      "expect": {"should_fail_call": "memory_query"}
+    },
+    {
+      "task_id": "t20n_negative_offset",
+      "layer": "regression",
+      "kind": "negative",
+      "goal": "file_read 的 offset 为负数(minimum 校验应拦截)。",
+      "files_hint": ["a.py"],
+      "setup_files": {"a.py": "x = 1\n"},
+      "script": [
+        {"tool_calls": [{"name": "file_read", "arguments": {"path": "a.py", "offset": -5}}]},
+        {"content": "offset 低于下限,已被拦截。"}
+      ],
+      "expect": {"should_fail_call": "file_read"}
+    },
+    {
+      "task_id": "t21n_path_escape_write",
+      "layer": "regression",
+      "kind": "negative",
+      "goal": "写入工作区之外的 ../evil.txt(路径逃逸应被沙箱拦截)。",
+      "script": [
+        {"tool_calls": [{"name": "file_write", "arguments": {"path": "../evil.txt", "content": "x"}}]},
+        {"content": "路径逃逸被拦截,未在工作区外创建任何文件。"}
+      ],
+      "expect": {"should_fail_call": "file_write", "no_files_created": ["../evil.txt"]}
+    },
+    {
+      "task_id": "t22n_path_escape_read",
+      "layer": "regression",
+      "kind": "negative",
+      "goal": "读取工作区之外的 ../secret.txt(路径逃逸应被沙箱拦截)。",
+      "script": [
+        {"tool_calls": [{"name": "file_read", "arguments": {"path": "../secret.txt"}}]},
+        {"content": "路径逃逸被拦截,未读取工作区外文件。"}
+      ],
+      "expect": {"should_fail_call": "file_read"}
+    },
+    {
+      "task_id": "t23b_empty_file_roundtrip",
+      "layer": "regression",
+      "kind": "boundary",
+      "goal": "创建空文件并读取(应为空而非报错)。",
+      "files_hint": ["blank.txt"],
+      "script": [
+        {"tool_calls": [{"name": "file_write", "arguments": {"path": "blank.txt", "content": ""}}]},
+        {"tool_calls": [{"name": "file_read", "arguments": {"path": "blank.txt"}}]},
+        {"content": "空文件创建并读取成功,内容为空。"}
+      ],
+      "expect": {"file_equals": {"blank.txt": ""}}
+    },
+    {
+      "task_id": "t24b_repeat_read_cache",
+      "layer": "regression",
+      "kind": "boundary",
+      "goal": "同参数重复读取同一文件(去重层应短路并复用缓存)。",
+      "files_hint": ["cached.py"],
+      "setup_files": {"cached.py": "value = 42\n"},
+      "script": [
+        {"tool_calls": [{"name": "file_read", "arguments": {"path": "cached.py"}}]},
+        {"tool_calls": [{"name": "file_read", "arguments": {"path": "cached.py"}}]},
+        {"content": "第二次读取命中去重缓存,未重复读盘。"}
+      ],
+      "expect": {"cache_hit_call": "file_read", "final_contains": "缓存"}
+    },
+    {
+      "task_id": "t25b_unicode_roundtrip",
+      "layer": "regression",
+      "kind": "boundary",
+      "goal": "中文路径与中文内容的写入读回往返。",
+      "files_hint": ["数据/说明.txt"],
+      "script": [
+        {"tool_calls": [{"name": "file_write", "arguments": {"path": "数据/说明.txt", "content": "项目说明:评测加固。\n"}}]},
+        {"tool_calls": [{"name": "file_read", "arguments": {"path": "数据/说明.txt"}}]},
+        {"content": "中文路径与内容往返一致。"}
+      ],
+      "expect": {"files_created": ["数据/说明.txt"], "file_contains": {"数据/说明.txt": "评测加固"}}
+    },
+    {
+      "task_id": "t26c_budget_edge",
+      "layer": "context",
+      "kind": "boundary",
+      "budget_edge": true,
+      "goal": "极紧预算下的长上下文(贴边 hard_limit,断言仍 100% 预算内)。",
+      "files_hint": ["edge_src.py"],
+      "generate_files": {"edge_src.py": {"kind": "functions", "count": 500, "probes": ["PRB90K0", "PRB90K1"]}},
+      "script": [
+        {"tool_calls": [{"name": "file_read", "arguments": {"path": "edge_src.py", "offset": 0, "limit": 200}}]},
+        {"tool_calls": [{"name": "file_read", "arguments": {"path": "edge_src.py", "offset": 150, "limit": 200}}]},
+        {"tool_calls": [{"name": "grep_search", "arguments": {"pattern": "def func_", "path": "edge_src.py"}}]},
+        {"tool_calls": [{"name": "file_read", "arguments": {"path": "edge_src.py", "offset": 300, "limit": 150}}]},
+        {"tool_calls": [{"name": "grep_search", "arguments": {"pattern": "return ", "path": "edge_src.py"}}]},
+        {"tool_calls": [{"name": "file_read", "arguments": {"path": "edge_src.py", "offset": 400, "limit": 100}}]},
+        {"tool_calls": [{"name": "file_read", "arguments": {"path": "edge_src.py", "offset": 100, "limit": 120}}]},
+        {"tool_calls": [{"name": "file_read", "arguments": {"path": "edge_src.py", "offset": 50, "limit": 90}}]},
+        {"content": "贴边预算任务完成。"}
+      ],
+      "expect": {"final_contains": "完成", "probe_contains": ["PRB90K0", "PRB90K1"], "fold_min": 4}
     }
   ]
 }

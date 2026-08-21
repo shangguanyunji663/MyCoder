@@ -30,6 +30,7 @@ from ..memory import StructuredMemory
 from ..memory.vectors import HashingEmbedder
 from ..models import ModelBackend
 from ..safety import Redactor, SafetyGuard
+from ..sft_collector import write_sft_sample
 from ..state import Message, RunResult, Step, TaskInput, ToolCall
 from ..tools import ToolContext, ToolRegistry, Workspace
 from ..util import now_iso, short_id
@@ -363,6 +364,21 @@ class AgentHarness:
         self._remember_task(task, status, final_answer)
         self._sync_guard_metrics()
         result_payload = {"status": status, "final_answer": final_answer, "error": error}
+
+        # 可选 SFT 样本采集:任务成功结束时,把 (instruction=goal, output=final_answer)
+        # 落成 sft_samples.jsonl,供后续 LoRA 微调使用。默认关闭,不破坏既有行为。
+        if (status == "completed"
+                and self.config.get("artifacts.sft_log", False)):
+            write_sft_sample(
+                task_dir=self.artifacts.task_dir(task.task_id),
+                task_id=task.task_id,
+                instruction=task.goal,
+                output=final_answer,
+                context=None,  # 企业知识库场景可在此注入检索到的 KB 上下文
+                status=status,
+                redactor=self.redactor,
+            )
+
         self.artifacts.export(task.task_id, self.metrics, result_payload,
                               checkpoint_obj=self.checkpoint.load(task.task_id))
         recorder.record({"type": "task_end", "status": status, "ts": now_iso()})

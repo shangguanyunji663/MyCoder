@@ -1,6 +1,6 @@
 # 评测加固方案（Eval Hardening Plan）
 
-> 状态：方案稿（待实施）
+> 状态：已实施（P0 + P1 + 轻量历史；2026-08-19 验证）
 > 范围：Layer-1 regression / Layer-2 context / Layer-3 memory / Layer-4 resume / Layer-5 retrieval / 安全边界
 > 目标：把"自证闭环式"的 100% 评测，改造为有统计意义、有区分度、含负例与对抗样本的可信评测。
 

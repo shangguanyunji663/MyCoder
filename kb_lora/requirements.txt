@@ -1,0 +1,16 @@
+# 企业知识库 LoRA 微调依赖(请在与 MyCoder 零依赖 venv 隔离的环境安装)
+# 推荐新建独立 venv:  python -m venv venv && venv\Scripts\activate && pip install -r requirements.txt
+
+# ---- 核心训练栈 ----
+torch>=2.3
+transformers>=4.44
+trl>=0.12
+peft>=0.13
+datasets>=2.20
+accelerate>=0.33
+# 4-bit QLoRA 量化(4060 显存友好)
+bitsandbytes>=0.43
+# 分词器/模型下载
+huggingface-hub>=0.24
+# 可选:若用 Unsloth 加速(替换 TRL 部分逻辑),取消下一行注释
+# unsloth[colab]>=2025.1

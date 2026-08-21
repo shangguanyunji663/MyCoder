@@ -45,14 +45,25 @@ def ensure_dir(path: str | Path) -> Path:
 
 
 def atomic_write(path: str | Path, content: str) -> None:
-    """原子写文本文件:先写临时文件再替换,避免中途崩溃留下半截文件。"""
+    """原子写文本文件:先写临时文件再替换,避免中途崩溃留下半截文件。
+
+    Windows 上病毒扫描或索引服务可能在刚写入后短暂占用目标文件,因此对
+    PermissionError 做有界重试;其他 I/O 异常仍立即向调用方报告。
+    """
     p = Path(path)
     ensure_dir(p.parent)
     fd, tmp = tempfile.mkstemp(dir=str(p.parent), suffix=".tmp")
     try:
         with os.fdopen(fd, "w", encoding="utf-8") as f:
             f.write(content)
-        os.replace(tmp, p)
+        for attempt in range(8):
+            try:
+                os.replace(tmp, p)
+                return
+            except PermissionError:
+                if attempt == 7:
+                    raise
+                time.sleep(0.025 * (attempt + 1))
     except BaseException:
         if os.path.exists(tmp):
             os.unlink(tmp)

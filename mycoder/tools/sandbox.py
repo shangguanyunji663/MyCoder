@@ -29,6 +29,9 @@ class Workspace:
     # ------------------------------------------------------------------
     def resolve(self, path: str | Path) -> Path:
         """把用户给出的路径安全解析到工作区内部,否则抛 PathEscapeError。"""
+        raw = str(path)
+        if "\x00" in raw:
+            raise PathEscapeError("路径含空字节,已拒绝")
         p = Path(path)
         if p.is_absolute():
             if not self.allow_absolute:

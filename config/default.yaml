@@ -66,6 +66,7 @@ safety:
 artifacts:
   root: ".mycoder/artifacts"
   redact_artifacts: true        # 导出工件时脱敏
+  sft_log: false                # true 时任务成功结束额外产出 sft_samples.jsonl(供 LoRA 微调)
 
 # --- 日志 ---
 logging:
