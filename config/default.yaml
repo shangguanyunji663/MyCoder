@@ -9,14 +9,20 @@ workspace:
   allow_absolute: false     # 是否允许工具接收绝对路径(默认否,强制工作区内)
 
 # --- 模型后端(2 类) ---
+# 默认 mock:评测/测试/演示全离线确定性;走真实 Ollama 的三种方式:
+#   1. 改这里的 backend: local_openai(需重启生效)
+#   2. 运行期临时切换: python -m mycoder run ... --backend local_openai
+#   3. 网页监控页「执行后端」选 Ollama,或用双跑对比按钮
+# 注意:258 项 pytest 与评测 L1-L5 不读此开关,它们显式使用 MockBackend。
+# CLI/API 默认加载内置默认值;要用本文件请显式传 --config config/default.yaml。
 model:
-  backend: mock             # mock | local_openai
+  backend: mock             # mock(默认,离线确定性剧本) | local_openai(Ollama 真模型)
   mock:
     seed: 42                # 决定脚本化响应的确定性
   local_openai:
-    base_url: "http://127.0.0.1:8080/v1"   # 本地 OpenAI 兼容服务(llama.cpp / vLLM / Ollama)
+    base_url: "http://127.0.0.1:11434/v1"   # Ollama 默认端口(llama.cpp 通常 8080,vLLM 8000)
     api_key: "local"                        # 本地服务通常可任意
-    model: "qwen2.5-coder-7b"               # 服务里注册的模型名
+    model: "qwen3.5:2b"                     # 必须与本地服务已注册的名字一致(ollama list 查看)
     temperature: 0.0
     timeout_seconds: 60
 

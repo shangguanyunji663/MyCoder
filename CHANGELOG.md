@@ -7,6 +7,7 @@
 ## [Unreleased]
 
 ### Added
+- Web 监控页后端自由切换 + 一键双跑对照:`POST /api/run` 新增可选 `backend` 字段(三档:跟随配置/mock/local_openai;携带 script 仍锁定 Mock);新增 `POST /api/compare` 同一目标自动提交 mock+ollama 两臂任务并返回 `compare_id`;任务快照与列表透出 `backend/arm/compare_group`;监控页新增「执行后端」选择、「▶ 双跑对比」按钮与两臂指标并排对比表。设计记录见 `docs/WEB_BACKEND_SWITCH.md`。
 - 环境工程化：仓库内置 Conda prefix 独立环境 `.conda/`(Python 3.11,由 Anaconda 管理,`.gitignore` 排除不入库),新增 `environment.yml` 与 `requirements-{dev,api,vector,project}.txt` 分拆清单;一条 `conda env create -p .conda -f environment.yml` 即可在任意机器完整重建。
 - 企业化改造：新增 MIT LICENSE、GitHub Actions CI、Docker Compose（Ollama + FastAPI）、82 条检索评测集、Layer 6 Ollama 真实任务 + LLM-as-judge、Hashing/FastEmbed 对照入口，以及本地 vendored Vue 3 运行监控页。
 - `LocalOpenAIBackend` 修复内部工具调用到 OpenAI 标准 `type/function` 格式的转换，兼容 Ollama 多轮工具调用。
@@ -15,6 +16,8 @@
 - 文档系统性审计(README/TESTING/OUTLINE/FINAL_SUMMARY/LEARNING_GUIDE):环境说明统一改为项目内置 `.conda` 环境,清除 ML2/base 及机器专属路径(`D:\ANACONDA\...`、`D:\DeepSeek Harness\...`)残留;测试统计修正为 **258 项/17 个文件**并为各文件标注实测用例数(test_safety 27→70、test_eval 14→18、test_models 14→15);benchmark 数据口径修正为手写任务 26 个 + 固定 seed 冻结基准 42 个;检索基准按 82 条查询的实测 recall/MRR 结果更新;LEARNING_GUIDE 新增「环境准备」与「模块关系一览」章节,补齐 Layer 6/7、`--suite real|embedder`、`GET /api/runs` 与 Vue 监控页等此前缺失的能力描述。
 
 ### Fixed
+- `monitor_page` 提交体此前总是携带空 `script`,导致页面任务无条件走 MockBackend;现改为仅填写脚本才携带,配合「执行后端」选择语义修正。
+- `tools/sandbox.py` 工作区指纹遍历由 `rglob('*') 先全量展开再过滤` 改为 `os.walk` 进入前剪枝:修复工作区落在大型项目根(含 .conda/.mimosa 等数万条目)时每次 checkpoint 卡顿一个数量级的性能缺陷,过滤语义不变。
 - `examples/giant_test.py`：修复生成模板转义残留的 `%%` 双百分号（非法 Python 语法），恢复为 `%`。
 
 ### Added

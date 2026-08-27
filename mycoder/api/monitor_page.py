@@ -62,6 +62,13 @@ button:disabled { opacity:.5; cursor:default; }
 .metric { border:1px solid var(--line); border-radius:7px; padding:9px; }
 .metric strong { display:block; font-size:18px; }
 .artifacts a { margin-right:12px; color:var(--blue); }
+.backend-row { display:flex; gap:14px; flex-wrap:wrap; margin-bottom:10px; }
+.backend-row label { display:flex; align-items:center; gap:4px; font-weight:400; margin:0; }
+.cmp-table { width:100%; border-collapse:collapse; margin-top:8px; font-size:13px; }
+.cmp-table th,.cmp-table td { border:1px solid var(--line); padding:6px 9px; text-align:left; }
+.cmp-table th { background:#fafbfc; font-weight:600; }
+.cmp-badge { display:inline-block; margin-left:6px; padding:0 6px; border-radius:9px;
+  font-size:11px; background:#eef2ff; color:var(--purple); }
 @media (max-width:760px) { .grid { grid-template-columns:1fr; } }
 </style>
 </head>
@@ -85,8 +92,11 @@ createApp({
     const goal = ref('给 src/util.py 增加 sha256_text 函数');
     const script = ref('[]');
     const followUp = ref('');
+    const backendChoice = ref('');   // '':跟随配置 | mock | local_openai
     const runs = ref([]); const selected = ref(null); const events = ref([]);
     const status = ref(''); const submitting = ref(false); let timer = null; let source = null;
+    // 双跑对照:{compare_id, mock:{id,status,metrics,error}, local:{...}}
+    const cmp = ref(null);
     const current = computed(() => runs.value.find(x => x.task_id === selected.value) || null);
     const result = ref(null); const metrics = computed(() => result.value?.metrics || {});
     async function refreshRuns() {
@@ -113,35 +123,80 @@ createApp({
       let parsed = []; try { parsed = JSON.parse(script.value || '[]'); }
       catch (_) { status.value = 'script 不是合法 JSON'; return; }
       submitting.value = true; status.value = '提交中'; events.value = [];
-      const body = { goal: goal.value, script: parsed };
+      const body = { goal: goal.value };
+      if (parsed.length) body.script = parsed;  // 仅填写了脚本才携带;留空则由服务端按选择/配置选后端
       if (followUp.value) body.follow_up_of = followUp.value;
+      if (backendChoice.value) body.backend = backendChoice.value;
       try {
         const r = await fetch('/api/run', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
         if (!r.ok) throw new Error('api'); const j = await r.json(); await refreshRuns(); watchTask(j.task_id);
       } catch (_) { status.value = '提交失败,请确认 FastAPI 服务已启动'; }
       finally { submitting.value = false; }
     }
-    onMounted(() => { refreshRuns(); timer = setInterval(refreshRuns, 2000); });
+    async function runCompare() {
+      submitting.value = true; status.value = '双跑对比提交中…';
+      const body = { goal: goal.value };
+      if (followUp.value) body.follow_up_of = followUp.value;
+      let parsed; try { parsed = JSON.parse(script.value || '[]'); } catch (_) { parsed = []; }
+      if (parsed.length) body.script = parsed;  // 仅 mock 臂回放剧本,ollama 臂忽略
+      cmp.value = null;
+      try {
+        const r = await fetch('/api/compare', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
+        if (!r.ok) { const e = await r.json().catch(() => ({})); throw new Error(e.error || 'api'); }
+        const j = await r.json();
+        cmp.value = { compare_id: j.compare_id,
+          mock: { id: j.task_ids[0], status: 'running', metrics: {}, error: null },
+          local: { id: j.task_ids[1], status: 'running', metrics: {}, error: null } };
+        await refreshRuns(); watchTask(j.task_ids[1]);
+      } catch (e) { status.value = '对比提交失败:' + (e.message || ''); }
+      finally { submitting.value = false; }
+    }
+    async function refreshCmp() {
+      const c = cmp.value; if (!c) return;
+      const upd = async key => { const tid = c[key].id;
+        const r = await fetch('/api/run/' + encodeURIComponent(tid)); if (!r.ok) return;
+        const b = await r.json(); c[key].status = b.status || ''; c[key].error = b.error;
+        c[key].metrics = b.result?.metrics || {}; };
+      await Promise.all([upd('mock'), upd('local')]);
+    }
+    onMounted(() => { refreshRuns(); timer = setInterval(() => { refreshRuns(); refreshCmp(); }, 2000); });
     onBeforeUnmount(() => { if (timer) clearInterval(timer); if (source) source.close(); });
-    return { goal, script, followUp, runs, selected, current, events, status, submitting,
-      result, metrics, labels, eventText, submit, watchTask };
+    return { goal, script, followUp, backendChoice, runs, selected, current, events, status,
+      submitting, result, metrics, cmp, labels, eventText, submit, runCompare, watchTask };
   },
   template: `
   <main><div class="grid"><section>
     <div class="panel"><h2>提交任务</h2>
+      <label>执行后端</label>
+      <div class="backend-row">
+        <label><input type="radio" value="" v-model="backendChoice">跟随配置</label>
+        <label><input type="radio" value="mock" v-model="backendChoice">Mock(离线)</label>
+        <label><input type="radio" value="local_openai" v-model="backendChoice">Ollama(真实模型)</label>
+      </div>
       <label>目标</label><textarea v-model="goal" rows="3"></textarea>
-      <label style="margin-top:10px">Mock script(JSON,留空走真实后端)</label>
+      <label style="margin-top:10px">Mock script(JSON,仅 Mock 臂回放)</label>
       <textarea v-model="script" rows="5"></textarea>
       <label style="margin-top:10px">父任务 ID(可选)</label><input v-model="followUp" placeholder="follow-up-of">
-      <div class="row" style="margin-top:12px"><button @click="submit" :disabled="submitting">提交任务</button><span class="muted">{{ status }}</span></div>
+      <div class="row" style="margin-top:12px"><button @click="submit" :disabled="submitting">提交任务</button><button @click="runCompare" :disabled="submitting">▶ 双跑对比</button><span class="muted">{{ status }}</span></div>
     </div>
     <div class="panel"><h2>任务列表</h2><p v-if="!runs.length" class="muted">暂无任务</p>
-      <ul class="task-list"><li v-for="item in runs" :key="item.task_id" :class="{active:selected===item.task_id}" @click="watchTask(item.task_id)"><span class="task-id">{{ item.task_id }}</span><span :class="['status','status-'+item.status]">{{ item.status }} · {{ item.event_count }}</span></li></ul>
+      <ul class="task-list"><li v-for="item in runs" :key="item.task_id" :class="{active:selected===item.task_id}" @click="watchTask(item.task_id)"><span class="task-id">{{ item.task_id }}<span v-if="item.arm" class="cmp-badge">{{ item.arm === 'mock' ? 'mock 臂' : 'ollama 臂' }}</span><span v-if="item.compare_group" class="muted" style="margin-left:6px">{{ item.compare_group }}</span></span><span :class="['status','status-'+item.status]">{{ item.status }} · {{ item.event_count }}</span></li></ul>
     </div>
   </section><section>
     <div class="panel"><h2>运行指标 <span v-if="current" class="muted">{{ current.task_id }}</span></h2>
       <div class="metrics"><div class="metric"><span class="muted">状态</span><strong>{{ result?.status || current?.status || '-' }}</strong></div><div class="metric"><span class="muted">步骤</span><strong>{{ metrics.steps ?? '-' }}</strong></div><div class="metric"><span class="muted">工具调用</span><strong>{{ metrics.tool_calls ?? '-' }}</strong></div><div class="metric"><span class="muted">Token</span><strong>{{ metrics.prompt_tokens_total ?? '-' }}</strong></div><div class="metric"><span class="muted">成本</span><strong>{{ metrics.cost_usd ?? 0 }}</strong></div></div>
       <div class="artifacts" v-if="selected" style="margin-top:12px">工件: <a :href="'/api/artifacts/'+selected+'/report.md'" target="_blank">report.md</a><a :href="'/api/artifacts/'+selected+'/trajectory.jsonl'" target="_blank">trajectory.jsonl</a><a :href="'/api/artifacts/'+selected+'/metrics.json'" target="_blank">metrics.json</a></div>
+    </div>
+    <div class="panel" v-if="cmp"><h2>最新对比 <span class="muted cmp-badge">{{ cmp.compare_id }}</span></h2>
+      <table class="cmp-table">
+        <tr><th>指标</th><th>Mock 臂({{ cmp.mock.id }})</th><th>Ollama 臂({{ cmp.local.id }})</th></tr>
+        <tr><td>状态</td><td :class="['status','status-'+cmp.mock.status]">{{ cmp.mock.status }}<span v-if="cmp.mock.error" class="muted">{{ ' ' + cmp.mock.error }}</span></td><td :class="['status','status-'+cmp.local.status]">{{ cmp.local.status }}<span v-if="cmp.local.error" class="muted">{{ ' ' + cmp.local.error }}</span></td></tr>
+        <tr><td>步骤</td><td>{{ cmp.mock.metrics.steps ?? '-' }}</td><td>{{ cmp.local.metrics.steps ?? '-' }}</td></tr>
+        <tr><td>工具调用</td><td>{{ cmp.mock.metrics.tool_calls ?? '-' }}</td><td>{{ cmp.local.metrics.tool_calls ?? '-' }}</td></tr>
+        <tr><td>Prompt Token</td><td>{{ cmp.mock.metrics.prompt_tokens_total ?? '-' }}</td><td>{{ cmp.local.metrics.prompt_tokens_total ?? '-' }}</td></tr>
+        <tr><td>Completion Token</td><td>{{ cmp.mock.metrics.completion_tokens_total ?? '-' }}</td><td>{{ cmp.local.metrics.completion_tokens_total ?? '-' }}</td></tr>
+        <tr><td>成本($)</td><td>{{ cmp.mock.metrics.cost_usd ?? 0 }}</td><td>{{ cmp.local.metrics.cost_usd ?? 0 }}</td></tr>
+      </table>
     </div>
     <div class="panel"><h2>实时事件 <span class="muted">{{ events.length }} 条</span></h2><p v-if="!events.length" class="muted">选择任务或提交任务后显示 SSE 事件</p><ul class="timeline"><li v-for="(ev,index) in events" :key="index" :class="['event','event-'+ev.type]"><div class="event-title">{{ labels[ev.type] || ev.type }}</div><div>{{ eventText(ev) }}</div><div class="event-meta">{{ ev.ts || '' }}</div></li></ul></div>
   </section></div></main>`

@@ -68,7 +68,7 @@ class MockBackend(ModelBackend):
         if "tool_calls" in entry:
             calls = []
             for c in entry["tool_calls"]:
-                c = dict(c)
+                c = dict(c)  # type: ignore[arg-type]  # 脚本元素按约定恒为 dict,宽类型来自 JSON 入口
                 c.setdefault("id", f"call_{self._call_seq}")
                 self._call_seq += 1
                 calls.append(c)

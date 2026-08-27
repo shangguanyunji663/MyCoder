@@ -1,8 +1,12 @@
 """FastAPI + SSE 实现(可选依赖 fastapi/uvicorn)。
 
 接口契约与标准库 server.py 基本一致,额外提供:
-  POST /api/run                  -> 异步提交任务,返回 {task_id}(后台线程执行 harness)
+  POST /api/run                  -> 异步提交任务,返回 {task_id}(后台线程执行 harness);
+                                    可选字段 backend="mock"|"local_openai" 按请求选择执行后端
+  POST /api/compare              -> 一键双跑对照:同一目标自动提交 mock/local_openai 两臂任务,
+                                    返回 {compare_id, task_ids}
   GET  /api/run/{id}             -> 任务状态 + 指标摘要(轮询替代)
+  GET  /api/runs                 -> 任务列表(含 backend/arm/compare_group 元数据)
   GET  /api/run/{id}/events     -> SSE 实时推送该任务的语义事件(可观测性事件总线)
   GET  /api/artifacts/{id}/{name}-> 下载某工件(metrics.json / report.md / trajectory.jsonl)
   GET  /health                  -> 服务与配置概览
@@ -26,20 +30,37 @@ from ..state import TaskInput
 from . import _MONITOR_PAGE
 from .event_bus import TaskEventBus
 
-# 任务状态内存表:task_id -> {status, result, error, events}
+# 任务状态内存表:task_id -> {status, result, error, events, backend, arm, compare_group}
 _RUNS: dict[str, dict] = {}
 
+_VALID_BACKENDS = ("mock", "local_openai")
 
-def _build_backend(config: Config, task_data: dict):
-    """后端选择:显式传入 script => MockBackend(离线/测试/演示);
-    否则用配置的真实后端(create_backend)。"""
-    script = task_data.get("script")
-    if script is not None:
+
+def _decide_backend(config: Config, task_data: dict) -> str:
+    """决定本任务用哪个后端(纯决策不构造实例)。
+
+    优先级:存在 script 一律锁定 mock(离线回放,历史行为);
+           其次请求显式指定的 backend 字段;
+           缺省则跟随服务端配置的 model.backend。
+    """
+    if task_data.get("script") is not None:
+        return "mock"
+    choice = task_data.get("backend")
+    if choice in _VALID_BACKENDS:
+        return choice
+    return config.model_backend
+
+
+def _build_backend(config: Config, task_data: dict, backend_name: str):
+    """按已决策的后端名构造实例(local_openai 通过配置副本注入工厂)。"""
+    if backend_name == "mock":
         from ..models import MockBackend
-        return MockBackend(script=script,
+        return MockBackend(script=task_data.get("script") or [],
                            default_answer=task_data.get("answer", "任务已完成。"))
+    cfg = Config(config.to_dict())
+    cfg.set("model.backend", backend_name)
     from ..models import create_backend
-    return create_backend(config)
+    return create_backend(cfg)
 
 
 def _worker(task_id: str, task_data: dict, config: Config, bus: TaskEventBus) -> None:
@@ -58,7 +79,9 @@ def _worker(task_id: str, task_data: dict, config: Config, bus: TaskEventBus) ->
         _RUNS[task_id]["events"].append(event)
 
     try:
-        backend = _build_backend(cfg, task_data)
+        backend_name = _decide_backend(config, task_data)
+        _RUNS[task_id]["backend"] = backend_name  # 尽早回填,列表立即可见
+        backend = _build_backend(cfg, task_data, backend_name)
         harness = AgentHarness.build(cfg, backend=backend,
                                      approver=AllowAllProvider(), on_event=_on_event)
         for rel, content in (task_data.get("setup_files") or {}).items():
@@ -88,20 +111,54 @@ def create_app(config: Config):
     app = FastAPI(title="MyCoder API", version="0.1")
     bus = TaskEventBus()
 
-    @app.post("/api/run")
-    def api_run(task: dict):
-        task_id = task.get("task_id") or ("api-" + uuid.uuid4().hex[:8])
-        _RUNS[task_id] = {"status": "running", "result": None, "error": None, "events": []}
+    def _launch(task_data: dict, *, arm: str | None = None,
+                compare_group: str | None = None) -> dict:
+        """公共提交通道:/api/run 与 /api/compare 都经由这里入队。"""
+        task_id = task_data.get("task_id") or ("api-" + uuid.uuid4().hex[:8])
+        _RUNS[task_id] = {"status": "running", "result": None, "error": None,
+                          "events": [], "backend": None,
+                          "arm": arm, "compare_group": compare_group}
         bus.register(task_id)
-        t = threading.Thread(target=_worker, args=(task_id, task, config, bus),
+        t = threading.Thread(target=_worker, args=(task_id, task_data, config, bus),
                              daemon=True)
         t.start()
         return {"task_id": task_id, "status": "submitted"}
+
+    @app.post("/api/run")
+    def api_run(task: dict):
+        choice = task.get("backend")
+        if choice is not None and choice not in _VALID_BACKENDS:
+            return JSONResponse({"error": f"backend 仅支持 {_VALID_BACKENDS}"},
+                                status_code=400)
+        return _launch(task)
+
+    @app.post("/api/compare")
+    def api_compare(task: dict):
+        goal = (task.get("goal") or "").strip()
+        if not goal:
+            return JSONResponse({"error": "双跑对比需要非空 goal"}, status_code=400)
+        compare_id = "cmp-" + uuid.uuid4().hex[:8]
+        common = {"goal": goal}
+        if task.get("follow_up_of"):
+            common["follow_up_of"] = task["follow_up_of"]
+        if task.get("setup_files"):
+            common["setup_files"] = task["setup_files"]
+        mock_arm = dict(common, task_id=f"{compare_id}-mock",
+                        backend="mock", answer=task.get("answer", "任务已完成。"))
+        if task.get("script"):
+            mock_arm["script"] = task["script"]
+        real_arm = dict(common, task_id=f"{compare_id}-local_openai",
+                        backend="local_openai")
+        ids = [_launch(mock_arm, arm="mock", compare_group=compare_id)["task_id"],
+               _launch(real_arm, arm="local_openai", compare_group=compare_id)["task_id"]]
+        return {"compare_id": compare_id, "task_ids": ids}
 
     @app.get("/api/runs")
     def api_runs():
         return [
             {"task_id": task_id, "status": rec["status"],
+             "backend": rec["backend"], "arm": rec["arm"],
+             "compare_group": rec["compare_group"],
              "event_count": len(rec["events"])}
             for task_id, rec in _RUNS.items()
         ]
@@ -113,6 +170,8 @@ def create_app(config: Config):
             return JSONResponse({"error": "no such task"}, status_code=404)
         return {"task_id": task_id, "status": rec["status"],
                 "result": rec["result"], "error": rec["error"],
+                "backend": rec["backend"], "arm": rec["arm"],
+                "compare_group": rec["compare_group"],
                 "event_count": len(rec["events"])}
 
     @app.get("/api/run/{task_id}/events")

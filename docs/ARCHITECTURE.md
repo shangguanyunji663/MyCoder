@@ -177,13 +177,15 @@ RunResult + Artifacts
 ### API 层(fastapi_server + event_bus)
 - `TaskEventBus`: 进程内队列桥,按 `task_id` 路由语义事件;`done(task_id)` 推入 `__done__` 哨兵
 - `create_app(config)`: 构建 FastAPI 应用,路由:
-  - `POST /api/run` → 立即返回 `task_id`,后台线程执行 harness
-  - `GET /api/run/{id}` → 轮询状态 + 指标摘要
+  - `POST /api/run` → 立即返回 `task_id`,后台线程执行 harness;可选 `backend` 字段按请求选择执行后端(mock/local_openai)
+  - `POST /api/compare` → 一键双跑对照:同一目标自动提交 mock/local_openai 两臂任务(共享 compare_group 元数据)
+  - `GET /api/run/{id}` → 轮询状态 + 指标摘要(含 backend/arm/compare_group)
   - `GET /api/run/{id}/events` → SSE 实时推送事件(`done` 哨兵结束)
   - `GET /api/artifacts/{id}/{name}` → 下载工件
-  - `GET /api/runs` → 任务列表与事件计数
+  - `GET /api/runs` → 任务列表与事件计数(携带后端元数据)
   - `GET /health` / `GET /`(本地 vendored Vue 3 运行监控页)
   - `/vue.global.prod.js` → 离线 Vue 运行时
+- 后端解析优先级(_decide_backend): 存在 script 锁定 mock > 显式 backend 字段 > 服务端配置默认;local_openai 通过配置副本注入 create_backend 工厂构造
 - 监控页通过 EventSource 订阅 SSE;标准库实现不提供 SSE 时,前端退化为状态轮询。
 - 标准库 `server.py` 保持零依赖实现;`serve --impl stdlib|fastapi` 切换
 

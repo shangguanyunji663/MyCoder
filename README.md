@@ -302,12 +302,18 @@ curl http://127.0.0.1:8910/health
 # 标准库实现(零依赖,默认)
 python -m mycoder serve --host 127.0.0.1 --port 8910
 
-# FastAPI + SSE 实现(需安装 api 依赖组,提供实时轨迹页与事件流)
-python -m mycoder serve --impl fastapi --port 8910
+# FastAPI + SSE 实现(需安装 api 依赖组,提供实时轨迹页/事件流/后端切换)
+python -m mycoder serve --impl fastapi --config config/default.yaml --port 8910
 
 # 测试 API
 curl http://127.0.0.1:8910/health
 ```
+
+监控页(Vue 3)支持按请求选择执行后端:
+
+- `POST /api/run` 可选字段 `backend:"mock"|"local_openai"`(缺省跟随服务端配置;携带 script 时锁定 Mock 回放);
+- `POST /api/compare` 一键双跑对照:同一目标自动提交 mock/local_openai 两臂任务(共享 compare_group),返回 `{compare_id, task_ids}`,页面「最新对比」并排展示两臂 状态/步骤/工具调用/Token/成本;
+- 任务列表(`GET /api/runs`)透出每任务 `backend/arm/compare_group` 元数据。
 
 ### 子代理编排
 

@@ -93,13 +93,24 @@ class Workspace:
         return out
 
     def _iter_safe(self):
-        for f in sorted(self.root.rglob("*")):
-            if not f.is_file():
-                continue
-            rel = f.relative_to(self.root)
-            if any(part.startswith(".") or part == "__pycache__" for part in rel.parts):
-                continue
-            yield f
+        # os.walk 自顶向下剪枝:隐藏/缓存目录在"进入前"就被剔除。
+        # 不能用 root.rglob('*') 后再过滤——那会把 .conda/.mimosa 等大目录
+        # 的全部条目 stat 一遍才丢弃,工作区落在项目根时 checkpoint 会慢一个数量级。
+        import os
+
+        for dirpath, dirnames, filenames in os.walk(self.root):
+            dirnames[:] = [d for d in dirnames
+                           if not d.startswith(".") and d != "__pycache__"]
+            for name in sorted(filenames):
+                if name.startswith("."):
+                    continue
+                f = Path(dirpath) / name
+                rel = f.relative_to(self.root)
+                if any(part.startswith(".") or part == "__pycache__"
+                       for part in rel.parts):
+                    continue
+                if f.is_file():
+                    yield f
 
     def list_files(self, pattern: str = "*") -> list[str]:
         """glob 列出文件(相对路径,排除隐藏/缓存)。"""

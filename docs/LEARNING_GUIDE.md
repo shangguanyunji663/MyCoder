@@ -1087,8 +1087,9 @@ def layer_retrieval(self):
 **FastAPI + SSE 服务 (api/event_bus.py + api/fastapi_server.py)**
 
 ```python
-# POST /api/run                  → 启动任务,返回 task_id
-# GET  /api/run/{id}             → 任务状态/结果快照
+# POST /api/run                  → 启动任务,返回 task_id;可选 backend 字段按请求选后端
+# POST /api/compare              → 一键双跑对照:同目标自动提交 mock+ollama 两臂(共享 compare_group)
+# GET  /api/run/{id}             → 任务状态/结果快照(含 backend/arm/compare_group)
 # GET  /api/run/{id}/events      → SSE 流式事件(含 done 哨兵 + 15s 心跳保活)
 # GET  /api/runs                 → 全部任务列表与事件计数
 # GET  /api/artifacts/{id}/{name}→ 下载工件
