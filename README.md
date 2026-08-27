@@ -63,7 +63,7 @@
   5. **检索召回**: exact/synonym/distractor/empty 四类查询的 recall@1/3/5 + MRR@5
   6. **真实任务 + LLM-as-judge**: Ollama 端到端代码任务、硬断言与独立模型评委
 - 26 个手写 benchmark 任务(回归17/上下文4/记忆4/恢复1) + 固定 seed 冻结基准 42 个任务 + 82 个检索查询(`retrieval.json` + `retrieval_extra.json`)
-- 258 项 pytest 自动化测试(17 个测试文件,含参数化安全边界与 Layer 6 离线用例)
+- 262 项 pytest 自动化测试(17 个测试文件,含参数化安全边界与 Layer 6 离线用例)
 - 对照实验: 固定任务、固定数据、仅改变系统开关
 - 运行工件聚合: 可复现的评测报告(JSON + Markdown)
 
@@ -75,9 +75,10 @@
 - 报告增加「耗时时间线与成本」小节
 
 ### 8. FastAPI + SSE API(可选依赖)
-- `api/event_bus.py` + `api/fastapi_server.py`:`POST /api/run` 立即返回 `task_id`、任务后台线程执行
+- `api/event_bus.py` + `api/fastapi_server.py`:`POST /api/run` 立即返回 `task_id`、任务后台线程执行;可选 `backend` 字段按请求选择执行后端(mock/local_openai,缺省跟随配置;携带 script 时锁定 Mock 回放)
+- `POST /api/compare` 一键双跑对照:同一目标自动提交 mock/local_openai 两臂任务(共享 compare_group)
 - `GET /api/run/{id}/events` SSE 实时推送语义事件并以 `done` 哨兵结束
-- `GET /api/run/{id}` 轮询状态;`GET /api/runs` 返回任务列表
+- `GET /api/run/{id}` 轮询状态;`GET /api/runs` 返回任务列表(含 backend/arm/compare_group 元数据)
 - 根路径返回 Vue 3 运行监控页(本地 vendored,零构建);FastAPI 下通过 SSE 实时展示事件
 - CLI `serve --impl stdlib | fastapi`(默认 stdlib 保持零依赖);`api` 依赖组为可选
 
@@ -171,7 +172,7 @@ mycoder/
 │   ├── retrieval.json           # 核心检索召回数据(38 条查询)
 │   ├── retrieval_extra.json     # 扩展 4 领域 44 条查询(合计 82 条)
 │   └── real_tasks.json          # Layer 6 真实编码任务(4 个)
-├── tests/                       # pytest 测试套件(17 个文件,258 项)
+├── tests/                       # pytest 测试套件(17 个文件,262 项)
 │   ├── conftest.py
 │   ├── test_models.py           # 15 个用例
 │   ├── test_tools.py            # 21 个用例
@@ -186,7 +187,7 @@ mycoder/
 │   ├── test_eval.py             # 18 个用例(五层评测+benchmark 完整性)
 │   ├── test_observability.py    # 7 个用例(链路追踪/JSON 日志)
 │   ├── test_vectors.py          # 11 个用例(嵌入/BM25/混合检索)
-│   ├── test_api.py              # 3 个用例(FastAPI SSE)
+│   ├── test_api.py              # 7 个用例(FastAPI SSE/后端切换/双跑对照)
 │   ├── test_orchestrator.py     # 4 个用例(并行/降级/事件)
 │   ├── test_real_eval.py        # 4 个用例(LLM-as-judge 解析/真实任务断言)
 │   └── test_performance.py      # 8 个用例(性能测试)
@@ -203,7 +204,8 @@ mycoder/
     ├── LEARNING_GUIDE.md        # 学习指南(初学者从这里开始)
     ├── FINAL_SUMMARY.md         # 交付总结
     ├── IMPROVEMENT_PLAN.md      # 改进计划
-    └── EVAL_HARDENING.md        # 评测加固方案
+    ├── EVAL_HARDENING.md        # 评测加固方案
+    └── WEB_BACKEND_SWITCH.md    # Web 后端切换与一键双跑对照设计记录
 ```
 
 ## 快速开始
@@ -257,7 +259,7 @@ python examples/show_folded.py
 ### 运行测试
 
 ```bash
-# 完整测试套件(单元 + 性能,258 项)
+# 完整测试套件(单元 + 性能,262 项)
 python -m pytest tests/
 
 # 仅运行性能测试
@@ -331,7 +333,7 @@ python -m mycoder orchestrate --goal "..." --max-workers 4
 
 关键配置项:
 - `workspace.root`: 工作区根目录(工具沙箱边界)
-- `model.backend`: 模型后端(mock / local_openai)
+- `model.backend`: 模型后端(mock 默认 / local_openai);网页「执行后端」与 `/api/run` 的 `backend` 字段可按请求覆盖
 - `model.local_openai.*`: base_url / 重试次数 / 退避 / 流式开关
 - `model.pricing`: 成本核算价目表(每 1k token 美元,按 model 名匹配)
 - `context.budget_tokens`: 上下文软预算(token 数)

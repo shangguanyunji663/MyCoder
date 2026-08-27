@@ -33,7 +33,7 @@ source .conda/Scripts/activate
 
 ```bash
 .conda/python.exe --version                       # 应输出 Python 3.11.x
-.conda/python.exe -m pytest tests/ --collect-only -q | tail -3   # 应列出 258 个用例
+.conda/python.exe -m pytest tests/ --collect-only -q | tail -3   # 应列出 262 个用例
 ```
 
 **环境坏了/换机器怎么重建**(一条命令,全部依赖自动就位):
@@ -1116,11 +1116,11 @@ test_cost.py           (5)  成本计量
 test_eval.py          (18)  五层评测+benchmark 数据完整性
 test_observability.py  (7)  Span/Tracer/trace.json/JSON 日志
 test_vectors.py       (11)  Embedding/VectorIndex/BM25/HybridRetriever
-test_api.py            (3)  FastAPI 路由/SSE/监控页
+test_api.py            (7)  FastAPI 路由/SSE/监控页/后端切换/双跑对照
 test_orchestrator.py   (4)  子任务分解/并行/降级
 test_real_eval.py      (4)  LLM-as-judge 解析/真实任务硬断言(离线部分)
 test_performance.py    (8)  压力测试(巨型文件)
-总计: 258 项(17 个测试文件,含参数化展开数量)
+总计: 262 项(17 个测试文件,含参数化展开数量)
 ```
 
 ### 10.4 性能测试
@@ -1160,7 +1160,7 @@ TaskInput → Harness.run() → [assemble → complete → check → execute →
 
 读完本指南后,建议按以下顺序实操(均已预装,`conda activate D:\PythonProject\mycoder\.conda` 后直接运行):
 
-1. `.conda/python.exe -m pytest tests/` — 全部 258 项测试通过,建立"改动前基线"
+1. `.conda/python.exe -m pytest tests/` — 全部 262 项测试通过,建立"改动前基线"
 2. `python examples/context_demo.py` — 直观看到上下文治理的压缩效果
 3. `python -m mycoder eval --suite all --output .mycoder/eval` — 生成五层评测报告并打开 report.md
 4. `python -m mycoder serve` + 浏览器打开 http://127.0.0.1:8910/ — Vue 监控页提交任务,SSE 实时看事件流

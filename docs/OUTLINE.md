@@ -138,7 +138,7 @@
 - mycoder/api/: server.py, __init__.py
 - mycoder/eval/: benchmark.py, experiment.py, runner.py, __init__.py
 
-### 测试 (17 个测试文件,258 个测试用例)
+### 测试 (17 个测试文件,262 个测试用例)
 - tests/conftest.py
 - tests/test_models.py (14 个用例)
 - tests/test_tools.py (21 个用例)
@@ -153,7 +153,7 @@
 - tests/test_eval.py (14 个用例 — 五层评测)
 - tests/test_observability.py (7 个用例 — 链路追踪/JSON 日志)
 - tests/test_vectors.py (11 个用例 — 嵌入/BM25/混合检索)
-- tests/test_api.py (3 个用例 — FastAPI SSE)
+- tests/test_api.py (7 个用例 — FastAPI SSE/后端切换/双跑对照)
 - tests/test_orchestrator.py (4 个用例 — 并行/降级/事件)
 - tests/test_performance.py (8 个用例 — 性能测试)
 

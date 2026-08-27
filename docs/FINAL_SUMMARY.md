@@ -6,7 +6,7 @@
 **开发语言**: Python 3.10+(项目内置环境为 Python 3.11)  
 **运行环境**: 项目内置 Conda 独立环境 `.conda/`(仓库根目录下,由 Anaconda 管理;重建命令 `conda env create -p .conda -f environment.yml`)  
 **测试环境**: pytest 8.x, Windows  
-**测试结果**: **258 个测试用例全部通过** ✅ (17 个测试文件;2 个 fastembed 可选用例在离线环境跳过)
+**测试结果**: **262 个测试用例** ✅ (17 个测试文件;当前基线 260 passed + 2 skipped,2 个 fastembed 可选用例在离线环境跳过)
 
 ---
 
@@ -22,7 +22,7 @@ mycoder/                          # 项目根目录
 ├── config/
 │   └── default.yaml              # 默认配置文件 (含所有可配置项)
 ├── benchmarks/
-│   └── tasks.json                # 12 个 benchmark 任务数据
+│   └── tasks.json                # 26 个手写 benchmark 任务(另有冻结基准 tasks.generated.json 42 个)
 ├── mycoder/                      # 核心代码包 (~35 Python 文件)
 │   ├── __init__.py               # 包初始化
 │   ├── __main__.py               # python -m mycoder 入口
@@ -81,28 +81,31 @@ mycoder/                          # 项目根目录
 │   ├── cost.py                   # 按价目表核算每次运行成本
 │   │
 │   └── eval/                     # [模块] 评测审计闭环
-│       ├── benchmark.py          # Benchmark 数据加载 (12个固定任务 + 检索用例)
+│       ├── benchmark.py          # Benchmark 数据加载 (26个手写任务 + 42个冻结任务 + 检索用例)
 │       ├── experiment.py         # 对照实验原语 (compare_metrics, format_delta)
 │       ├── runner.py             # EvalRunner (五层评测运行器)
+│       ├── judge.py              # LLM-as-judge 评委 (严格 JSON 结论/解析兜底)
+│       ├── real.py               # Layer 6 真实模型端到端评测 (Ollama)
 │       └── __init__.py
 │
-├── tests/                        # pytest 测试套件 (16 个测试文件, 206 个用例)
+├── tests/                        # pytest 测试套件 (17 个测试文件, 262 个用例)
 │   ├── conftest.py               # 共享 fixtures (tmp_path_factory_override, config, workspace, make_harness)
-│   ├── test_models.py            # 14 个测试用例
-│   ├── test_tools.py             # 21 个测试用例
-│   ├── test_sandbox.py           # 15 个测试用例
-│   ├── test_safety.py            # 27 个测试用例
-│   ├── test_context.py           # 19 个测试用例
-│   ├── test_memory.py            # 19 个测试用例
-│   ├── test_checkpoint.py        # 15 个测试用例
-│   ├── test_harness.py           # 15 个测试用例
+│   ├── test_models.py            # 15 个测试用例
+│   ├── test_tools.py            # 21 个测试用例
+│   ├── test_sandbox.py          # 15 个测试用例
+│   ├── test_safety.py           # 70 个测试用例 (参数化边界展开)
+│   ├── test_context.py          # 19 个测试用例
+│   ├── test_memory.py           # 19 个测试用例
+│   ├── test_checkpoint.py       # 15 个测试用例
+│   ├── test_harness.py          # 15 个测试用例
 │   ├── test_backend.py           # 9 个测试用例 (重试/退避/流式/usage)
 │   ├── test_cost.py              # 5 个测试用例 (成本核算)
-│   ├── test_eval.py              # 14 个测试用例 (五层评测)
+│   ├── test_eval.py             # 18 个测试用例 (五层评测)
 │   ├── test_observability.py     # 7 个测试用例 (链路追踪/JSON 日志)
-│   ├── test_vectors.py           # 11 个测试用例 (嵌入/BM25/混合检索)
-│   ├── test_api.py               # 3 个测试用例 (FastAPI SSE)
+│   ├── test_vectors.py          # 11 个测试用例 (嵌入/BM25/混合检索)
+│   ├── test_api.py               # 7 个测试用例 (FastAPI SSE/后端切换/双跑对照)
 │   ├── test_orchestrator.py      # 4 个测试用例 (并行/降级/事件)
+│   ├── test_real_eval.py         # 4 个测试用例 (LLM-as-judge 解析/真实任务断言)
 │   └── test_performance.py       # 8 个测试用例 (性能测试)
 │
 ├── examples/                     # 使用示例
@@ -479,7 +482,7 @@ python generate_test_file.py
 ```bash
 # 使用项目内置 Conda 环境(先激活: conda activate D:\PythonProject\mycoder\.conda)
 
-# 运行完整测试套件 (258 项)
+# 运行完整测试套件 (262 项)
 .conda/python.exe -m pytest tests/ -v
 
 # 运行性能测试
@@ -503,14 +506,15 @@ python generate_test_file.py
 | test_harness.py | 15 | run_flow(complete/artifacts/metrics/max_steps), safety_intercept, dedup, resume_flow |
 | test_backend.py | 9 | 重试/指数退避/429/5xx/Retry-After, usage 解析, 流式 complete_stream |
 | test_cost.py | 5 | 按价目表核算 token 成本, 缺价目不计费 |
-| test_eval.py | 14 | benchmark_data, eval_layers(回归/上下文/记忆/恢复/检索), report_writing |
+| test_eval.py | 18 | benchmark_data, eval_layers(回归/上下文/记忆/恢复/检索), report_writing |
 | test_observability.py | 7 | Tracer span 层级/耗时, on_event 重建, JSON 日志, trace.json 导出 |
 | test_vectors.py | 11 | HashingEmbedder 确定性/归一化, 余弦, BM25 排序, HybridRetriever α 加权, FastEmbed 可选 |
-| test_api.py | 3 | health/追踪页, 提交→SSE→完成事件, 未知任务 404 |
+| test_api.py | 7 | health/监控页, 提交→SSE→完成事件, 未知任务 404, 后端字段非法 400, 显式 local_openai 工厂注入, script 锁定 Mock, 双跑对照两臂元数据 |
 | test_orchestrator.py | 4 | 并行编排, 失败降级(partial), 默认 planner 单子任务, 事件发射 |
+| test_real_eval.py | 4 | LLM-as-judge JSON 解析/兜底, 真实任务硬断言与 mock 跳过(离线部分) |
 | test_performance.py | 8 | 文件读取/列表/Grep/记忆/上下文/断点/工作区/工具注册 性能测试 |
 
-**总计**: 206 个测试用例(16 个测试文件)
+**总计**: 262 个测试用例(17 个测试文件)
 
 ---
 
@@ -585,8 +589,8 @@ python generate_test_file.py
 ✅ **2 类模型后端** — MockBackend(全离线脚本化) / LocalOpenAIBackend(127.0.0.1:port)  
 ✅ **7 类工具** — file_read/write/edit/list, grep, shell, memory_query  
 ✅ **3 类运行工件** — trajectory.jsonl(轨迹) + checkpoint.json(断点) + metrics.json+report.md(报告)  
-✅ **12 个 Benchmark 任务** — regression(4)/context(3)/memory(4)/resume(1)  
-✅ **206 项自动化测试** — 覆盖全部模块 + 性能测试, 全部通过  
+✅ **26 个 Benchmark 任务** — 手写任务 regression(17)/context(4)/memory(4)/resume(1);另有固定 seed 冻结基准 tasks.generated.json(42 个任务)入库保证可复现  
+✅ **262 项自动化测试** — 覆盖全部模块 + 性能测试, 当前基线 260 passed + 2 skipped  
 ✅ **8 维度性能测试** — 使用巨型文件(~4669行)进行压力测试  
 ✅ **上下文治理演示** — context_demo.py 展示三层裁剪策略  
 ✅ **完整文档** — README / ARCHITECTURE / OUTLINE / TESTING / FINAL_SUMMARY  
