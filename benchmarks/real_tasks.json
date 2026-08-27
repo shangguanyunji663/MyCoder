@@ -1,0 +1,36 @@
+{
+  "tasks": [
+    {
+      "task_id": "rt01_sha256",
+      "layer": "real",
+      "goal": "在 utils.py 中实现 sha256_text(text) 函数,使用 hashlib 对 UTF-8 文本计算 SHA-256 十六进制摘要,并补充 docstring。",
+      "setup_files": {"utils.py": "def normalize_name(value):\n    return value.strip().lower()\n"},
+      "expect": {"file_contains": {"utils.py": "sha256_text"}, "files_created": []},
+      "judge": {"rubric": "必须使用 hashlib.sha256,按 UTF-8 编码,返回 hexdigest,并保持现有函数可用。"}
+    },
+    {
+      "task_id": "rt02_off_by_one",
+      "layer": "real",
+      "goal": "修复 pagination.py 的 slice_lines 函数: start 和 end 使用 Python 切片语义,end 为开区间,并处理 start 越界。",
+      "setup_files": {"pagination.py": "def slice_lines(lines, start, end):\n    # bug: end 被当成闭区间\n    return lines[start:end + 1]\n"},
+      "expect": {"file_contains": {"pagination.py": "return lines[start:end]"}},
+      "judge": {"rubric": "修复 off-by-one,保留切片语义,不要破坏函数签名。"}
+    },
+    {
+      "task_id": "rt03_write_tests",
+      "layer": "real",
+      "goal": "为 calc.py 编写 pytest 单元测试,覆盖 add 的正数/负数、divide 的正常结果和除零异常。",
+      "setup_files": {"calc.py": "def add(a, b):\n    return a + b\n\ndef divide(a, b):\n    return a / b\n"},
+      "expect": {"files_created": ["tests/test_calc.py"], "file_contains": {"tests/test_calc.py": "def test_"}},
+      "judge": {"rubric": "测试应可被 pytest 收集,覆盖四类场景,除零使用 pytest.raises,断言清晰。"}
+    },
+    {
+      "task_id": "rt04_deep_merge",
+      "layer": "real",
+      "goal": "在 config_utils.py 中实现 deep_merge(base, override):递归合并嵌套字典,override 的值覆盖 base,非字典值直接替换,且不要修改输入对象。",
+      "setup_files": {"config_utils.py": "def deep_merge(base, override):\n    raise NotImplementedError\n"},
+      "expect": {"file_contains": {"config_utils.py": "def deep_merge"}},
+      "judge": {"rubric": "正确递归合并,不发生输入对象副作用,处理空字典和标量覆盖。"}
+    }
+  ]
+}

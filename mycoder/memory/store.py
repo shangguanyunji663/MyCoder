@@ -18,8 +18,7 @@ from pathlib import Path
 from typing import Any
 
 from ..util import ensure_dir, json_dump, now_iso, sha256_text, truncate
-from .vectors import (BM25, EmbeddingProvider, HashingEmbedder, HybridRetriever,
-                      VectorIndex, tokenize)
+from .vectors import BM25, EmbeddingProvider, HashingEmbedder, HybridRetriever, VectorIndex, tokenize
 
 _SYMBOL_RE = re.compile(r"^\s*(def |class |async def |import |from )")
 

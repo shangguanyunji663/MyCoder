@@ -1,0 +1,41 @@
+# MyCoder 一键部署: ollama(本地模型)+ mycoder(API 服务)
+# 用法:
+#   docker compose up -d          # 首次会自动构建镜像并拉取模型
+#   健康检查: curl http://127.0.0.1:8910/health
+#   监控页:   http://127.0.0.1:8910/
+services:
+  ollama-init:
+    image: ollama/ollama:latest
+    volumes:
+      - ollama_models:/root/.ollama
+    command: ["pull", "qwen3.5:2b"]
+    restart: "no"
+
+  ollama:
+    image: ollama/ollama:latest
+    depends_on:
+      ollama-init:
+        condition: service_completed_successfully
+    volumes:
+      - ollama_models:/root/.ollama
+    ports:
+      - "11434:11434"
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  mycoder:
+    build: .
+    depends_on:
+      ollama:
+        condition: service_healthy
+    ports:
+      - "8910:8910"
+    volumes:
+      - mycoder_data:/app/.mycoder
+
+volumes:
+  ollama_models:
+  mycoder_data:

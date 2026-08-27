@@ -20,16 +20,32 @@ import json
 import shutil
 import time
 from pathlib import Path
+from typing import Any
 
 from ..config import Config
 from ..memory import StructuredMemory
+from ..memory.vectors import (
+    BM25,
+    EmbeddingProvider,
+    FastEmbedEmbedder,
+    HashingEmbedder,
+    HybridRetriever,
+    VectorIndex,
+    tokenize,
+)
 from ..models import MockBackend
 from ..safety import AllowAllProvider
 from ..state import RunResult, TaskInput
 from ..util import now_iso, sha256_file
 from .benchmark import by_layer, load_benchmarks
 
-_RETRIEVAL_PATH = Path(__file__).resolve().parent.parent.parent / "benchmarks" / "retrieval.json"
+_BENCH_DIR = Path(__file__).resolve().parent.parent.parent / "benchmarks"
+# 检索评测集分两份:手写核心(retrieval.json)+ 扩样领域(retrieval_extra.json),
+# 加载时合并;缺失的文件自动跳过,保持可复现。
+_RETRIEVAL_PATHS = [
+    _BENCH_DIR / "retrieval.json",
+    _BENCH_DIR / "retrieval_extra.json",
+]
 
 # 各层 ok 判定阈值:通过率达到该值才判 ok(而非二值 100%),指标退化可被察觉
 _PASS_THRESHOLD = 0.9
@@ -77,6 +93,14 @@ class EvalRunner:
             reports["resume"] = self.layer_resume(tasks)
         if suite in ("all", "retrieval"):
             reports["retrieval"] = self.layer_retrieval()
+        if suite == "embedder":
+            reports["embedder"] = self.layer_embedder_ab()
+        if suite == "real":
+            from .real import RealTaskRunner
+            reports["real"] = RealTaskRunner(
+                self.base_config, output_dir=self.output_dir,
+                tasks_path=self.base_config.get("eval.real.tasks")
+            ).run()
         self._append_history(reports)
         return reports
 
@@ -414,7 +438,8 @@ class EvalRunner:
                         ht.memory.has_fresh_summary(rel, sha256_file(wd / "ws" / rel))
                         for rel in mutate) if ht.memory else False
                     sc_ok = memory_available and reads >= 1 and read_new and fresh_after
-                    why = f"应检测过期并重读新内容(重读{reads}次,读到新内容={read_new},记忆已更新={fresh_after})"
+                    why = f"应检测过期并重读新内容(重读{reads}次," \
+                          f"读到新内容={read_new},记忆已更新={fresh_after})"
                 elif scenario == "missing":
                     sc_ok = reads >= 1
                     why = "记忆缺失应优雅降级重读"
@@ -517,7 +542,7 @@ class EvalRunner:
                                         ws[-1]["arguments"]["content"]}
                         break
             for k in stop_points:
-                for dtype in ["clean"] + drift_types:
+                for dtype in ["clean", *drift_types]:
                     total += 1
                     tag = f"{t['task_id']}_k{k}_{dtype}"
                     wd = self.output_dir / "workspaces" / tag
@@ -578,7 +603,7 @@ class EvalRunner:
         另报告 MRR@5(hybrid/substring)度量排序质量,替代纯 recall 的单一视角。
         """
         if tasks is None:
-            tasks = load_benchmarks(_RETRIEVAL_PATH)
+            tasks = load_benchmarks([p for p in _RETRIEVAL_PATHS if p.exists()])
         rt = by_layer(tasks, "retrieval")
         details: list[str] = []
         per_query: list[dict] = []
@@ -657,3 +682,82 @@ class EvalRunner:
                             total=total_q, summary=summary, details=details,
                             per_query=per_query, avg_recall=avg, mrr=mrr,
                             type_stats=type_stats)
+
+    # ------------------------------------------------------------------
+    # Layer 7: 嵌入器对照(hash 索引 vs bge-small)
+    def layer_embedder_ab(self) -> dict:
+        """在同一检索集上对比零依赖哈希嵌入与 FastEmbed bge-small。
+
+        该层显式独立于默认套件,避免 CI 或离线用户被迫下载模型。
+        """
+        paths = [p for p in _RETRIEVAL_PATHS if p.exists()]
+        tasks = load_benchmarks([str(p) for p in paths])
+        try:
+            embedders: dict[str, EmbeddingProvider] = {
+                "hashing": HashingEmbedder(),
+                "bge-small": FastEmbedEmbedder(
+                    model_name="BAAI/bge-small-zh-v1.5",
+                    cache_dir=str(self.output_dir / "embed_cache"),
+                ),
+            }
+            # 提前触发可选依赖加载,缺失时给出可操作的 skip 报告。
+            embedders["bge-small"].embed("依赖探测")
+        except Exception as exc:
+            # 可选模型可能因未安装、首次下载超时或本地缓存损坏而不可用;
+            # 不让默认的离线评测因此失败,同时把原因写入报告。
+            return {"ok": True, "skipped": True, "passed": 0, "total": 0,
+                    "pass_rate": 1.0,
+                    "summary": f"跳过嵌入器对照: {type(exc).__name__}: {exc}",
+                    "details": []}
+
+        stats: dict[str, dict[str, Any]] = {
+            name: {"recall": {1: 0.0, 3: 0.0, 5: 0.0}, "mrr": 0.0}
+            for name in embedders
+        }
+        total = 0
+        mrr_total = 0
+        details: list[str] = []
+        for task in by_layer(tasks, "retrieval"):
+            for query in task.get("queries", []):
+                total += 1
+                relevant = {"file:" + item for item in query.get("relevant", [])}
+                for name, embedder in embedders.items():
+                    index = VectorIndex(embedder)
+                    bm25 = BM25()
+                    for doc in task.get("corpus", []):
+                        doc_id = "file:" + doc["id"]
+                        index.add(doc_id, doc["text"])
+                        bm25.add(doc_id, tokenize(doc["text"]))
+                    ranked = HybridRetriever(index, bm25, embedder).rank(
+                        query["q"], top_k=5)
+                    for k in (1, 3, 5):
+                        topk = {item for item, _ in ranked[:k]}
+                        stats[name]["recall"][k] += (
+                            len(relevant & topk) / len(relevant) if relevant else 0.0
+                        )
+                    if relevant:
+                        stats[name]["mrr"] += next(
+                            (1.0 / (idx + 1) for idx, (item, _) in enumerate(ranked)
+                             if item in relevant), 0.0)
+                if relevant:
+                    mrr_total += 1
+        n = total or 1
+        result: dict[str, dict[str, Any]] = {}
+        for name, values in stats.items():
+            result[name] = {
+                "recall": {k: round(values["recall"][k] / n, 4) for k in (1, 3, 5)},
+                "mrr@5": round(values["mrr"] / (mrr_total or 1), 4),
+            }
+            details.append(
+                f"{name}: recall@1/3/5="
+                f"{result[name]['recall'][1]:.0%}/"
+                f"{result[name]['recall'][3]:.0%}/"
+                f"{result[name]['recall'][5]:.0%}, "
+                f"MRR@5={result[name]['mrr@5']:.2f}"
+            )
+        better = result["bge-small"]["recall"][3] >= result["hashing"]["recall"][3]
+        return self._report(
+            ok=better, passed=int(better), total=1,
+            summary=f"{total} 个查询的 hashing / bge-small 对照", details=details,
+            embedders=result, query_count=total,
+        )

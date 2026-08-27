@@ -17,8 +17,8 @@ import pytest
 _has_fastapi = importlib.util.find_spec("fastapi") is not None
 pytestmark = pytest.mark.skipif(not _has_fastapi, reason="需要可选依赖 fastapi")
 
-from mycoder.config import Config  # noqa: E402
 from mycoder.api import create_app  # noqa: E402
+from mycoder.config import Config  # noqa: E402
 
 
 def _client():
@@ -40,7 +40,9 @@ def test_health_and_trace_page():
         assert h.status_code == 200 and h.json()["status"] == "ok"
         page = c.get("/")
         assert page.status_code == 200
-        assert "EventSource" in page.text  # vanilla JS 追踪页
+        assert "EventSource" in page.text
+        assert "Vue" in page.text
+        assert c.get("/vue.global.prod.js").status_code == 200
         oa = c.get("/openapi.json")
         assert oa.status_code == 200
         assert "MyCoder API" in oa.json()["info"]["title"]
@@ -53,6 +55,9 @@ def test_run_and_sse_stream():
         assert r.status_code == 200
         tid = r.json()["task_id"]
         assert tid == "api-test-1"
+        runs = c.get("/api/runs")
+        assert runs.status_code == 200
+        assert any(item["task_id"] == tid for item in runs.json())
 
         # SSE 消费:应收到 task_start ... task_end,并以 done 结束
         types = []

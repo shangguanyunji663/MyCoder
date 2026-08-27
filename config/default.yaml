@@ -73,6 +73,17 @@ logging:
   level: INFO
   file: ".mycoder/harness.log"
 
+# --- Layer 6 真实模型评测(显式 suite real 才运行) ---
+eval:
+  real:
+    tasks: "benchmarks/real_tasks.json"
+    pass_threshold: 0.5
+    judge_timeout_seconds: 60
+    judge:
+      base_url: null
+      api_key: null
+      model: null
+
 # --- localhost API 服务 ---
 api:
   host: "127.0.0.1"

@@ -2,8 +2,6 @@
 import json
 from pathlib import Path
 
-import pytest
-
 from mycoder.observability import Span, Tracer
 from mycoder.state import TaskInput
 
@@ -32,7 +30,7 @@ class TestTracer:
         assert any(n.startswith("step:") for n in names)
         assert any(n == "model_call" for n in names)
         assert any(n == "tool:file_read" for n in names)
-        run = [s for s in d["spans"] if s["name"] == "run"][0]
+        run = next(s for s in d["spans"] if s["name"] == "run")
         assert run["status"] == "completed"
         assert run["end"] is not None
 
@@ -80,8 +78,9 @@ class TestHarnessTracing:
 
 class TestJsonLogging:
     def test_json_formatter_parseable(self):
-        from mycoder.agent.harness import JsonFormatter
         import logging
+
+        from mycoder.agent.harness import JsonFormatter
 
         fmt = JsonFormatter()
         rec = logging.LogRecord("x", logging.INFO, "p", 1, "hello %s", ("world",), None)

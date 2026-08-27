@@ -36,6 +36,9 @@ mycoder = "mycoder.cli:main"
 where = ["."]
 include = ["mycoder*"]
 
+[tool.setuptools.package-data]
+"mycoder.api" = ["static/*.js"]   # vendored Vue 3 运行时(离线监控页用)
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q"
@@ -76,7 +79,12 @@ select = [
 ]
 ignore = [
     "RUF003", # ambiguous-unicode-character: Chinese comments use fullwidth punctuation
+    "RUF001", # ambiguous-character: 测试数据/生成脚本中的中文全角标点是有意的
+    "RUF002", # ambiguous-docstring: 文档中的数学符号 α/β 是刻意的
 ]
+
+[tool.ruff.lint.per-file-ignores]
+"mycoder/api/monitor_page.py" = ["E501"]
 
 [tool.mypy]
 python_version = "3.10"

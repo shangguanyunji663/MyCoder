@@ -86,6 +86,14 @@ DEFAULT: dict[str, Any] = {
                 "format": "text"},  # text | json(结构化 JSON 日志,逐行)
     "observability": {"enabled": True},  # 链路追踪 trace.json(零依赖,可选 OTel 桥接)
     "api": {"host": "127.0.0.1", "port": 8910},
+    "eval": {
+        "real": {
+            "tasks": "benchmarks/real_tasks.json",
+            "pass_threshold": 0.5,
+            "judge_timeout_seconds": 60,
+            "judge": {"base_url": None, "api_key": None, "model": None},
+        }
+    },
     # 子代理编排:默认关闭;显式调用 Orchestrator 时才生效(max_workers 控制并行度)
     "agent": {"orchestrator": {"enabled": False, "max_workers": 4}},
 }

@@ -1,33 +1,54 @@
-# MyCoder 运行期产物
-.mycoder/
-artifacts/
-*.log
+# ============================================================
+# MyCoder .gitignore —— 按类别分组;每个条目说明它是什么、为何不入库
+# ============================================================
 
-# Python
+# ---- 1. Python 工具缓存(首次运行自动重建,内容可再生) ----
 __pycache__/
 *.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# ---- 2. 构建/打包产物(setuptools/pip/tox 生成,由源码+pyproject 复现) ----
 *.egg-info/
 .eggs/
 build/
 dist/
-.pytest_cache/
-.mypy_cache/
-.ruff_cache/
 .tox/
+
+# ---- 3. 测试覆盖率输出(pytest-cov 运行后生成) ----
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+
+# ---- 4. 虚拟环境 / Conda 项目内环境(.conda 由 environment.yml 一键重建) ----
 .venv/
 venv/
+.conda/
 
-# 环境/IDE
+# ---- 5. MyCoder 自身运行期产物(checkpoint、评测工作区、嵌入缓存、日志) ----
+.mycoder/
+artifacts/
+*.log
+
+# ---- 6. AI 助手与本地工具的会话/扫描状态(ZCode 计划、WorkBuddy 记忆、Mimosa 安全扫描约百 MB 快照) ----
+.zcode/
+.workbuddy/
+.mimosa/
+
+# ---- 7. IDE / 编辑器个人配置(VS Code、JetBrains、vim) ----
 .idea/
 .vscode/
 *.swp
-.DS_Store
 
-# 测试临时目录
+# ---- 8. 测试运行产生的临时沙箱目录(conftest 动态创建) ----
 tests/_workspace*/
-/tmp/
-# ZCode session artifacts
-.zcode/
 
-# WorkBuddy session artifacts
-.workbuddy/
+# ---- 9. 操作系统自动生成文件(Windows/macOS 桌面残留) ----
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ---- 10. 杂项临时路径 ----
+/tmp/

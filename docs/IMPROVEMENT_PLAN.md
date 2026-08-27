@@ -10,7 +10,7 @@
 
 - 分层解耦架构：models / tools / context / memory / checkpoint / safety / eval 七层正交；
 - 确定性工程哲学：MockBackend 脚本化 + 五层评测（区分「模型能力」与「系统能力」）；
-- 206 项 pytest 全绿（16 个测试文件）；安全链完整（schema 校验 → 路径沙箱 → shell 白/黑名单 → 去重 → HITL → 脱敏）。
+- 改造前已有 206 项 pytest 基线；本轮扩展后为 258 个收集用例（17 个测试文件）；安全链完整（schema 校验 → 路径沙箱 → shell 白/黑名单 → 去重 → HITL → 脱敏）。
 
 面试官深挖会暴露的三类问题（本计划要解决）：
 
@@ -61,7 +61,7 @@
 
 ### Phase 5 — P2.2 FastAPI + SSE `[状态: 已完成]`
 
-范围：`mycoder/api/fastapi_server.py`（可选依赖组 `api`）：`POST /api/run` 立即返回 task_id、任务后台线程执行（harness 增加最小侵入的 `on_event` 回调 + 进程内 EventBus）；`GET /api/run/{id}/events` SSE 实时推送 step/tool/完成事件；对齐既有路由并自带 OpenAPI；根路径提供零构建 vanilla JS 实时轨迹页；CLI `serve --impl stdlib|fastapi`（默认 stdlib 保持零依赖）。
+范围：`mycoder/api/fastapi_server.py`（可选依赖组 `api`）：`POST /api/run` 立即返回 task_id、任务后台线程执行（harness 增加最小侵入的 `on_event` 回调 + 进程内 EventBus）；`GET /api/run/{id}/events` SSE 实时推送 step/tool/完成事件；对齐既有路由并自带 OpenAPI；根路径提供本地 vendored Vue 3 零构建运行监控页；CLI `serve --impl stdlib|fastapi`（默认 stdlib 保持零依赖）。
 
 验收：TestClient 测试「提交 → 读 SSE 流 → 断言完成事件」通过；fastapi 未安装时给出友好报错。
 

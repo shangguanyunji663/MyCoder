@@ -12,12 +12,13 @@ Planner 默认是确定性退化分解(整体当一个子任务);生产环境可
 """
 from __future__ import annotations
 
+import contextlib
 import json
 import uuid
+from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable
 
 from ..config import Config
 from ..state import TaskInput
@@ -130,7 +131,5 @@ class Orchestrator:
     def _emit(self, event: dict) -> None:
         if self.on_event is None:
             return
-        try:
+        with contextlib.suppress(Exception):
             self.on_event(event)
-        except Exception:
-            pass

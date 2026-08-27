@@ -17,7 +17,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from .util import atomic_write, ensure_dir, now_iso
+from .util import ensure_dir, now_iso
 
 
 def write_sft_sample(task_dir: Path, *, task_id: str, instruction: str,

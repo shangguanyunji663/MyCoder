@@ -36,7 +36,7 @@ def cosine(a: list[float], b: list[float]) -> float:
     """余弦相似度(输入为 L2 归一化向量时即点积)。"""
     if not a or not b or len(a) != len(b):
         return 0.0
-    return sum(x * y for x, y in zip(a, b))
+    return sum(x * y for x, y in zip(a, b, strict=True))
 
 
 # --------------------------------------------------------------------------
@@ -106,12 +106,12 @@ class FastEmbedEmbedder(EmbeddingProvider):
     def __init__(self, model_name: str = "BAAI/bge-small-zh-v1.5", cache_dir: str | None = None):
         self.model_name = model_name
         self.cache_dir = cache_dir
-        self._model = None
+        self._model: Any = None
 
-    def _ensure(self):
+    def _ensure(self) -> None:
         if self._model is None:
             try:
-                from fastembed import TextEmbedding  # type: ignore
+                from fastembed import TextEmbedding
             except ImportError as e:  # pragma: no cover - 可选依赖
                 raise RuntimeError(
                     "使用 FastEmbedEmbedder 需要先安装 fastembed:"
@@ -125,7 +125,7 @@ class FastEmbedEmbedder(EmbeddingProvider):
 
     def embed(self, text: str) -> list[float]:
         self._ensure()
-        vec = list(self._model.embed([text or ""]))[0]  # pragma: no cover - 需真实模型
+        vec = next(self._model.embed([text or ""]))  # pragma: no cover - 需真实模型
         return [float(x) for x in vec]
 
 
@@ -162,7 +162,7 @@ class VectorIndex:
         payload = {
             "model": type(self.embedder).__name__,
             "dim": self.embedder.dim(),
-            "docs": [{"id": i, "text": t} for i, t in zip(self.ids, self.texts)],
+            "docs": [{"id": i, "text": t} for i, t in zip(self.ids, self.texts, strict=True)],
             "vectors": self.vectors,
         }
         Path(path).write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
@@ -252,7 +252,7 @@ class HybridRetriever:
             return {}
         mx = max(scores.values())
         if mx <= 0:
-            return {k: 0.0 for k in scores}
+            return dict.fromkeys(scores, 0.0)
         return {k: v / mx for k, v in scores.items()}
 
     def rank(self, query: str, top_k: int = 5) -> list[tuple[str, float]]:

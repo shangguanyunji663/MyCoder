@@ -68,7 +68,7 @@ def build_dataset(path: str, tokenizer):
     - Alpaca: {"instruction","input","output"}
     """
     rows = []
-    with open(path, "r", encoding="utf-8") as f:
+    with open(path, encoding="utf-8") as f:
         for line in f:
             line = line.strip()
             if not line:
@@ -162,8 +162,8 @@ def main():
     trainer.train()
     trainer.save_model(args.output)
     print(f"[DONE] LoRA 适配器已保存至: {args.output}")
-    print(f"[NEXT] 把适配器合并/挂载到 Ollama 的 qwen3.5:2b 后,在 "
-          f"config/default.yaml 设 model.local_openai.model: \"qwen3.5:2b\" 即可接回 MyCoder。")
+    print("[NEXT] 把适配器合并/挂载到 Ollama 的 qwen3.5:2b 后,在 "
+          "config/default.yaml 设 model.local_openai.model: \"qwen3.5:2b\" 即可接回 MyCoder。")
 
 
 if __name__ == "__main__":

@@ -16,6 +16,7 @@
 """
 from __future__ import annotations
 
+import contextlib
 import json
 import logging
 import time
@@ -27,7 +28,7 @@ from ..config import Config
 from ..context import ContextManager, PruneInfo
 from ..cost import CostTracker
 from ..memory import StructuredMemory
-from ..memory.vectors import HashingEmbedder
+from ..memory.vectors import EmbeddingProvider, HashingEmbedder
 from ..models import ModelBackend
 from ..safety import Redactor, SafetyGuard
 from ..sft_collector import write_sft_sample
@@ -194,10 +195,8 @@ class AgentHarness:
         """
         if self.on_event is None:
             return
-        try:
+        with contextlib.suppress(Exception):
             self.on_event(event)
-        except Exception:
-            pass
 
     # ------------------------------------------------------------------
     def run(self, task: TaskInput, stop_after_steps: int | None = None) -> RunResult:
@@ -548,7 +547,7 @@ class AgentHarness:
         })
 
 
-def _make_embedder(config) -> HashingEmbedder:
+def _make_embedder(config) -> EmbeddingProvider:
     """按配置选择嵌入器:默认 hashing(零依赖),可选 fastembed(懒加载)。"""
     kind = config.get("memory.retrieval.embedder", "hashing")
     if kind == "fastembed":

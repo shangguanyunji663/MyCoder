@@ -2,6 +2,7 @@
 import pytest
 
 from mycoder.models import LocalOpenAIBackend, MockBackend, ModelResponse, create_backend, tools_to_openai
+from mycoder.state import Message
 
 
 class TestMockBackend:
@@ -98,3 +99,12 @@ class TestSchemas:
     def test_model_response_defaults(self):
         r = ModelResponse()
         assert r.content == "" and r.tool_calls == []
+
+    def test_internal_tool_calls_convert_to_openai_shape(self):
+        msg = Message("assistant", "", tool_calls=[
+            {"id": "call-1", "name": "file_read", "arguments": '{"path":"a.py"}'}
+        ])
+        payload = msg.to_openai()
+        assert payload["tool_calls"][0]["type"] == "function"
+        assert payload["tool_calls"][0]["function"]["name"] == "file_read"
+        assert payload["tool_calls"][0]["function"]["arguments"] == '{"path":"a.py"}'

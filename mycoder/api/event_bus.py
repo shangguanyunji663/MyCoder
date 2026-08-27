@@ -19,13 +19,13 @@ class TaskEventBus:
     """每任务一个队列的事件总线,供 SSE / 轮询消费。"""
 
     def __init__(self) -> None:
-        self._queues: dict[str, "queue.Queue"] = {}
+        self._queues: dict[str, queue.Queue] = {}
         self._lock = threading.Lock()
 
-    def register(self, task_id: str) -> "queue.Queue":
+    def register(self, task_id: str) -> queue.Queue:
         """为某任务创建事件队列;需在后台 worker 启动之前调用。"""
         with self._lock:
-            q: "queue.Queue" = queue.Queue()
+            q: queue.Queue = queue.Queue()
             self._queues[task_id] = q
             return q
 

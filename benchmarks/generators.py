@@ -17,8 +17,8 @@ from __future__ import annotations
 
 import argparse
 import json
-from pathlib import Path
 import random
+from pathlib import Path
 
 SEED = 20260819
 
@@ -288,7 +288,6 @@ def gen_memory_pairs(seed: int = SEED) -> list[dict]:
                 expect = {"files_created": [caller],
                           "file_contains": {caller: f"{name}_core(1)"}}
             else:  # wrong_hit
-                decoy = f"decoy_{name}.py"
                 script = [{"tool_calls": [query]},
                           {"tool_calls": [{"name": "file_write",
                                            "arguments": {"path": caller,
@@ -330,7 +329,7 @@ def gen_resume_tasks(seed: int = SEED) -> list[dict]:
         ("b", "res_b", [2, 4]),
         ("c", "res_c", [1, 2]),
     ]
-    for j, (tag, dirname, stops) in enumerate(specs):
+    for _j, (tag, dirname, stops) in enumerate(specs):
         tid = f"g_res_{tag}"
         script: list[dict] = []
         n_parts = rng.randint(4, 5)
@@ -452,7 +451,7 @@ _IO_DOCS = [
 ]
 
 
-def gen_retrieval_dataset(seed: int = SEED) -> dict:  # noqa: ARG001(seed 预留压力集)
+def gen_retrieval_dataset(seed: int = SEED):  # seed 预留:后续压力数据集复现
     """四类查询:
       exact      —— 查询是某文档头部的原句子串 => substring 必须能命中;
       synonym    —— 同义改写无公共子串 => hybrid 应严格优于 substring;

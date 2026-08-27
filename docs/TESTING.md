@@ -2,7 +2,7 @@
 
 ## 测试架构
 
-MyCoder 采用**五层评测体系** + **性能测试套件**，刻意区分"模型能力"与"系统能力"：
+MyCoder 采用**七层评测体系** + **性能测试套件**，刻意区分"模型能力"与"系统能力"：
 
 ```
 Layer 1: Harness 回归测试
@@ -14,7 +14,9 @@ Layer 3: 记忆收益评测
   ─── 验证 follow-up 阶段重复读文件归零、正确率
 
 Layer 4: 恢复正确性评测  ─── 验证 checkpoint/resume + 工作区漂移识别边界
-Layer 5: 检索召回评测   ─── 验证同义改写查询下 substring / vector / hybrid 的 recall@1/3/5
+Layer 5: 检索召回评测   ─── 验证 82 条 exact/synonym/distractor/empty 查询的 recall@1/3/5 + MRR
+Layer 6: 真实任务评测     ─── Ollama 端到端执行 + 硬断言 + LLM-as-judge
+Layer 7: 嵌入器对照       ─── HashingEmbedder vs FastEmbed bge-small(可选下载)
 
 性能测试:
   ─── 使用巨型文件(~4669行)对 8 个维度进行压力测试
@@ -369,11 +371,12 @@ python -m mycoder eval --suite retrieval
 | test_eval.py | 14 | benchmark_data, eval_layers(回归/上下文/记忆/恢复/检索), report_writing |
 | test_observability.py | 7 | Tracer span 层级/耗时, on_event 重建, JSON 日志可解析, trace.json 导出 |
 | test_vectors.py | 11 | HashingEmbedder 确定性/归一化/余弦, BM25 排序, HybridRetriever α 加权, FastEmbed 可选 |
-| test_api.py | 3 | health/追踪页, 提交→SSE→完成事件, 未知任务 404 |
+| test_api.py | 3 | health/Vue 监控页, 提交→SSE→完成事件, 未知任务 404 |
 | test_orchestrator.py | 4 | 并行编排, 失败降级(partial), 默认 planner 单子任务, 事件发射 |
+| test_real_eval.py | 4 | LLM-as-judge JSON 解析/兜底, 真实任务硬断言与 mock 跳过 |
 | test_performance.py | 8 | 文件读取/列表/Grep/记忆/上下文/断点/工作区/工具注册 性能测试 |
 
-**总计**: 206 个测试用例，16 个测试文件
+**总计**: 258 个测试用例，17 个测试文件(含参数化展开数量)
 
 ## 确定性保证
 所有测试使用：

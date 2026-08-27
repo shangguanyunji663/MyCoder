@@ -66,7 +66,7 @@
 - `server.py`: HTTP API 服务(127.0.0.1:8910,标准库实现)
 - `event_bus.py`: TaskEventBus(进程内事件队列)
 - `fastapi_server.py`: FastAPI + SSE 实现(可选依赖)
-- `trace_page.py`: vanilla JS 实时追踪页
+- `monitor_page.py`: 本地 vendored Vue 3 实时运行监控页
 
 ### 11. 评测审计 (eval/)
 - `benchmark.py`: benchmark 数据加载(12 个任务 + 检索用例)
@@ -138,7 +138,7 @@
 - mycoder/api/: server.py, __init__.py
 - mycoder/eval/: benchmark.py, experiment.py, runner.py, __init__.py
 
-### 测试 (16 个测试文件,206 个测试用例)
+### 测试 (17 个测试文件,258 个测试用例)
 - tests/conftest.py
 - tests/test_models.py (14 个用例)
 - tests/test_tools.py (21 个用例)

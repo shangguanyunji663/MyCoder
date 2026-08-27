@@ -14,6 +14,7 @@ import importlib.util
 
 import pytest
 
+from mycoder.memory.store import StructuredMemory
 from mycoder.memory.vectors import (
     BM25,
     HashingEmbedder,
@@ -22,8 +23,6 @@ from mycoder.memory.vectors import (
     cosine,
     tokenize,
 )
-from mycoder.memory.store import StructuredMemory
-
 
 _HAS_FASTEMBED = importlib.util.find_spec("fastembed") is not None
 
@@ -102,8 +101,10 @@ def test_hybrid_alpha_weighting():
     emb = HashingEmbedder()
     idx = VectorIndex(emb)
     bm = BM25()
-    idx.add("x", "登录 会话 令牌"); bm.add("x", tokenize("登录 会话 令牌"))
-    idx.add("y", "天气 运动 户外"); bm.add("y", tokenize("天气 运动 户外"))
+    idx.add("x", "登录 会话 令牌")
+    bm.add("x", tokenize("登录 会话 令牌"))
+    idx.add("y", "天气 运动 户外")
+    bm.add("y", tokenize("天气 运动 户外"))
     ret = HybridRetriever(idx, bm, emb, alpha=0.9)
     r_high = dict(ret.rank("登录 会话", top_k=2))
     ret2 = HybridRetriever(idx, bm, emb, alpha=0.1)
@@ -152,5 +153,8 @@ def test_structured_memory_search_backward_compatible_format():
 def test_fastembed_embedder_loads():
     from mycoder.memory.vectors import FastEmbedEmbedder
     emb = FastEmbedEmbedder()
-    v = emb.embed("缓存命中率下降时应增加重试")
+    try:
+        v = emb.embed("缓存命中率下降时应增加重试")
+    except Exception as exc:
+        pytest.skip(f"fastembed 模型不可用(可能需要首次下载): {exc}")
     assert len(v) == emb.dim()

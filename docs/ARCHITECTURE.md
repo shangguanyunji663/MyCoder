@@ -181,7 +181,10 @@ RunResult + Artifacts
   - `GET /api/run/{id}` → 轮询状态 + 指标摘要
   - `GET /api/run/{id}/events` → SSE 实时推送事件(`done` 哨兵结束)
   - `GET /api/artifacts/{id}/{name}` → 下载工件
-  - `GET /health` / `GET /`(vanilla JS 实时追踪页)
+  - `GET /api/runs` → 任务列表与事件计数
+  - `GET /health` / `GET /`(本地 vendored Vue 3 运行监控页)
+  - `/vue.global.prod.js` → 离线 Vue 运行时
+- 监控页通过 EventSource 订阅 SSE;标准库实现不提供 SSE 时,前端退化为状态轮询。
 - 标准库 `server.py` 保持零依赖实现;`serve --impl stdlib|fastapi` 切换
 
 ### Orchestrator(子代理编排)

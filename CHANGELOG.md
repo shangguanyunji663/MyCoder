@@ -6,6 +6,10 @@
 
 ## [Unreleased]
 
+### Added
+- 企业化改造：新增 MIT LICENSE、GitHub Actions CI、Docker Compose（Ollama + FastAPI）、82 条检索评测集、Layer 6 Ollama 真实任务 + LLM-as-judge、Hashing/FastEmbed 对照入口，以及本地 vendored Vue 3 运行监控页。
+- `LocalOpenAIBackend` 修复内部工具调用到 OpenAI 标准 `type/function` 格式的转换，兼容 Ollama 多轮工具调用。
+
 ### Fixed
 - `examples/giant_test.py`：修复生成模板转义残留的 `%%` 双百分号（非法 Python 语法），恢复为 `%`。
 

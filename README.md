@@ -1,5 +1,9 @@
 # MyCoder — 本地 Coding Agent Harness
 
+[![CI](https://github.com/shangguanyunji663/MyCoder/actions/workflows/ci.yml/badge.svg)](https://github.com/shangguanyunji663/MyCoder/actions/workflows/ci.yml)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 面向代码仓库长链路任务的本地 Agent 运行底座,解决多轮开发任务中:
 - **上下文膨胀** → 上下文治理模块(预算裁剪)
 - **重复读文件** → 结构化记忆系统(任务/文件/关联三层)
@@ -51,14 +55,15 @@
 - 评测指标: 回归任务 100% 通过率,100% 预算内完成率
 
 ### 6. 评测审计闭环
-- 五层评测(区分模型能力与系统能力):
+- 五层离线系统评测 + Layer 6 真实模型评测(区分系统能力与模型能力):
   1. **Harness 回归**: 运行时稳定性(能完成、工件齐全、断言满足)
   2. **上下文治理**: 预算裁剪收益(治理 vs 不治理的 prompt 长度差)
   3. **记忆收益**: follow-up 重复读文件归零、正确率
   4. **恢复正确性**: checkpoint/resume + 漂移识别边界
-  5. **检索召回**: 同义改写查询下 substring / vector / hybrid 的 recall@1/3/5 对照
-- 12 个 benchmark 任务(回归/上下文/记忆/恢复) + 6 个检索用例(`benchmarks/retrieval.json`)
-- 206 项 pytest 自动化测试(16 个测试文件)
+  5. **检索召回**: exact/synonym/distractor/empty 四类查询的 recall@1/3/5 + MRR@5
+  6. **真实任务 + LLM-as-judge**: Ollama 端到端代码任务、硬断言与独立模型评委
+- 12 个 benchmark 任务(回归/上下文/记忆/恢复) + 82 个检索查询(`retrieval.json` + `retrieval_extra.json`)
+- 258 项 pytest 自动化测试(17 个测试文件,含参数化安全边界与 Layer 6 离线用例)
 - 对照实验: 固定任务、固定数据、仅改变系统开关
 - 运行工件聚合: 可复现的评测报告(JSON + Markdown)
 
@@ -72,7 +77,8 @@
 ### 8. FastAPI + SSE API(可选依赖)
 - `api/event_bus.py` + `api/fastapi_server.py`:`POST /api/run` 立即返回 `task_id`、任务后台线程执行
 - `GET /api/run/{id}/events` SSE 实时推送语义事件并以 `done` 哨兵结束
-- `GET /api/run/{id}` 轮询状态;根路径返回零构建 vanilla JS 实时追踪页
+- `GET /api/run/{id}` 轮询状态;`GET /api/runs` 返回任务列表
+- 根路径返回 Vue 3 运行监控页(本地 vendored,零构建);FastAPI 下通过 SSE 实时展示事件
 - CLI `serve --impl stdlib | fastapi`(默认 stdlib 保持零依赖);`api` 依赖组为可选
 
 ### 9. 子代理编排(可选增强,默认关闭)
@@ -139,7 +145,8 @@ mycoder/
 │   │   ├── server.py            # 标准库实现(零依赖,127.0.0.1:8910)
 │   │   ├── event_bus.py         # TaskEventBus(进程内事件队列)
 │   │   ├── fastapi_server.py    # FastAPI + SSE 实现(可选依赖)
-│   │   └── trace_page.py        # vanilla JS 实时追踪页
+│   │   ├── monitor_page.py      # Vue 3 运行监控页(零构建)
+│   │   └── static/vue.global.prod.js # vendored Vue 3 运行时
 │   ├── eval/                    # 评测审计
 │   │   ├── benchmark.py         # benchmark 数据加载
 │   │   ├── experiment.py        # 对照实验原语
@@ -147,8 +154,10 @@ mycoder/
 │   └── cost.py                  # 按价目表核算每次运行成本
 ├── benchmarks/
 │   ├── tasks.json               # 12 个 benchmark 任务
-│   └── retrieval.json           # 6 个检索召回用例(同义改写)
-├── tests/                       # pytest 测试套件(16 个文件,206 项)
+│   ├── retrieval.json           # 核心检索召回数据
+│   ├── retrieval_extra.json     # 4 个扩展领域,共 82 条查询
+│   └── real_tasks.json          # Layer 6 真实编码任务
+├── tests/                       # pytest 测试套件(17 个文件,258 项)
 │   ├── conftest.py
 │   ├── test_models.py           # 14 个用例
 │   ├── test_tools.py            # 21 个用例
@@ -237,6 +246,22 @@ python -m mycoder eval --suite retrieval --output .mycoder/eval
 
 # 查看评测报告
 cat .mycoder/eval/report.md
+
+# Layer 6: Ollama 真实模型任务(qwen3.5:2b)
+python examples/real_model_demo.py
+
+# Layer 7: 可选真实嵌入器对照(首次运行会下载 bge-small)
+python -m mycoder eval --suite embedder --output .mycoder/embedder
+```
+
+### Docker 快速开始
+
+```bash
+docker compose up -d
+# 首次启动会由 ollama-init 拉取 qwen3.5:2b
+curl http://127.0.0.1:8910/health
+# 浏览器打开 Vue 3 运行监控页
+# http://127.0.0.1:8910/
 ```
 
 ### 启动 localhost API
@@ -309,14 +334,22 @@ python -m mycoder orchestrate --goal "..." --max-workers 4
 - 漂移识别准确率: 100%(5/5 漂移检出, 5/5 无漂移正确)
 - 恢复后完成率: 100%
 
-### 检索召回(Layer 5)
-- 同义改写查询 6 例: hybrid recall@3 = 100%,substring = 0%,hybrid 全面胜出
-- vector / hybrid 路径默认零依赖(HashingEmbedder),接入 fastembed 后语义召回进一步增强
+### 检索召回(Layer 5, n=82)
+- 四个新领域(安全、前端、分布式、数据与 ML)扩展后共 82 条查询。
+- 分类通过率: exact 23/23、synonym 29/29、distractor 11/11、empty 19/19。
+- 平均 recall@1/3/5: substring = 28%/28%/28%, hybrid = 61%/63%/63%。
+- MRR@5: substring = 0.44, hybrid = 0.98。
+- 默认 HashingEmbedder 保持零依赖；`--suite embedder` 可对比 FastEmbed bge-small（首次运行需下载模型）。
+
+### Layer 6 真实模型端到端结果(Ollama qwen3.5:2b)
+- 实测运行 4 个编码任务：4/4 完成，3/4 硬断言通过；总耗时约 963 秒。
+- qwen3.5:2b 的部分评委请求超时，最终 LLM-as-judge 通过率为 0/4；该结果如实保留在 `.mycoder/real/real_report.json`，不把硬断言通过伪装成模型评委通过。
+- 运行命令：`python examples/real_model_demo.py`；更大模型或更长评委超时配置可获得更稳定的 judge 结果。
 
 ### 安全边界
-- 回归任务通过率: 100%
-- 参数校验拦截: 100%
-- 路径逃逸拦截: 100%
+- 回归任务: 由离线 benchmark 持续验证(含正例、负例、边界)
+- 参数校验拦截: 通过率 100%(回归样本)
+- 路径逃逸拦截: 通过率 100%(回归样本)
 
 ## 许可证
 

@@ -6,7 +6,7 @@
   GET  /api/run/{id}/events     -> SSE 实时推送该任务的语义事件(可观测性事件总线)
   GET  /api/artifacts/{id}/{name}-> 下载某工件(metrics.json / report.md / trajectory.jsonl)
   GET  /health                  -> 服务与配置概览
-  GET  /                         -> vanilla JS 实时追踪页
+  GET  /                         -> Vue 3 运行监控页
   GET  /docs , /openapi.json    -> OpenAPI(自动)
 
 零依赖核心不受影响:本模块仅在安装 fastapi 时才被导入,CLI 通过
@@ -23,8 +23,8 @@ from queue import Empty
 
 from ..config import Config
 from ..state import TaskInput
+from . import _MONITOR_PAGE
 from .event_bus import TaskEventBus
-from . import _TRACE_PAGE
 
 # 任务状态内存表:task_id -> {status, result, error, events}
 _RUNS: dict[str, dict] = {}
@@ -83,7 +83,7 @@ def _worker(task_id: str, task_data: dict, config: Config, bus: TaskEventBus) ->
 def create_app(config: Config):
     """构建 FastAPI 应用(延迟导入 fastapi,避免核心零依赖被污染)。"""
     from fastapi import FastAPI
-    from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
+    from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, StreamingResponse
 
     app = FastAPI(title="MyCoder API", version="0.1")
     bus = TaskEventBus()
@@ -97,6 +97,14 @@ def create_app(config: Config):
                              daemon=True)
         t.start()
         return {"task_id": task_id, "status": "submitted"}
+
+    @app.get("/api/runs")
+    def api_runs():
+        return [
+            {"task_id": task_id, "status": rec["status"],
+             "event_count": len(rec["events"])}
+            for task_id, rec in _RUNS.items()
+        ]
 
     @app.get("/api/run/{task_id}")
     def api_status(task_id: str):
@@ -138,7 +146,9 @@ def create_app(config: Config):
         f = root / name
         if not f.exists():
             return JSONResponse({"error": "no such artifact"}, status_code=404)
-        return HTMLResponse(f.read_text(encoding="utf-8", errors="replace"))
+        media_type = "application/json" if name.endswith(".json") else "text/plain"
+        return HTMLResponse(f.read_text(encoding="utf-8", errors="replace"),
+                            media_type=media_type)
 
     @app.get("/health")
     def api_health():
@@ -146,8 +156,15 @@ def create_app(config: Config):
                 "workspace": config.workspace_root,
                 "budget_tokens": config.get("context.budget_tokens")}
 
+    @app.get("/vue.global.prod.js")
+    def vue_runtime():
+        from .monitor_page import VUE_RUNTIME
+        if not VUE_RUNTIME.exists():
+            return JSONResponse({"error": "vendored Vue runtime missing"}, status_code=404)
+        return FileResponse(VUE_RUNTIME, media_type="application/javascript")
+
     @app.get("/")
     def index():
-        return HTMLResponse(_TRACE_PAGE)
+        return HTMLResponse(_MONITOR_PAGE)
 
     return app

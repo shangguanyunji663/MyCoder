@@ -20,6 +20,7 @@
 """
 from __future__ import annotations
 
+import contextlib
 import json
 import time
 from dataclasses import dataclass, field
@@ -32,7 +33,7 @@ from ..util import ensure_dir, now_iso, short_id
 def _try_otel():
     """探测 opentelemetry-api,可用则返回其 trace 模块,否则 None。"""
     try:  # pragma: no cover - 依赖可选,在 CI 默认缺失
-        from opentelemetry import trace as otel_trace  # type: ignore
+        from opentelemetry import trace as otel_trace
         return otel_trace
     except Exception:  # pragma: no cover
         return None
@@ -55,6 +56,9 @@ class Span:
     # 内部字段(不进导出)
     _start_ns: float = field(default=0.0, repr=False)
     _end_ns: float = field(default=0.0, repr=False)
+    # OTel 镜像句柄(可选依赖,缺失时为 None)
+    _otel_span: Any = field(default=None, repr=False)
+    _otel_ctx: Any = field(default=None, repr=False)
 
     def close(self, status: str = "ok") -> None:
         self.end = now_iso()
@@ -203,9 +207,9 @@ class Tracer:
                 ot = self._otel_tracer.start_span(
                     name, start_time=span._start_ns, attributes=span.attributes,
                     parent=ctx)
-                ot._mycoder_span_id = span.span_id  # type: ignore[attr-defined]
-                span._otel_span = ot  # type: ignore[attr-defined]
-                span._otel_ctx = self._otel.set_span_in_context(ot)  # type: ignore[attr-defined]
+                ot._mycoder_span_id = span.span_id
+                span._otel_span = ot
+                span._otel_ctx = self._otel.set_span_in_context(ot)
             except Exception:
                 pass
         return span
@@ -216,12 +220,10 @@ class Tracer:
             return
         span.close(status)
         # OTel 镜像(可选、隔离失败)
-        ot = getattr(span, "_otel_span", None)  # pragma: no cover - 依赖可选
+        ot = span._otel_span
         if ot is not None:  # pragma: no cover - 依赖可选
-            try:
+            with contextlib.suppress(Exception):
                 ot.end(end_time=span._end_ns or time.time_ns())
-            except Exception:
-                pass
 
     # ------------------------------------------------------------------
     def to_dict(self) -> dict:

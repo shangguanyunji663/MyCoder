@@ -1035,7 +1035,7 @@ test_vectors.py       (11)  Embedding/VectorIndex/BM25/HybridRetriever
 test_api.py            (3)  FastAPI 路由/SSE/工件下载
 test_orchestrator.py   (4)  子任务分解/并行/降级
 test_performance.py    (8)  压力测试(巨型文件)
-总计: 206 项(16 个测试文件)
+总计: 258 项(17 个测试文件,含参数化展开数量)
 ```
 
 ### 10.4 性能测试

@@ -83,7 +83,7 @@ def test_default_planner_single_subtask(tmp_path):
 
 def test_events_emitted(tmp_path):
     cfg = _isolated_config(tmp_path)
-    events = []
+    events: list = []
     orch = Orchestrator(cfg, planner=_planner, backend_factory=_mock_factory,
                         max_workers=3, on_event=events.append)
     orch.run("目标")

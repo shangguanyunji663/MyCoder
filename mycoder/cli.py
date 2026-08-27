@@ -190,7 +190,8 @@ def main(argv=None) -> int:
     s.set_defaults(func=cmd_serve)
 
     e = sub.add_parser("eval", help="运行评测")
-    e.add_argument("--suite", choices=["all", "regression", "context", "memory", "resume", "retrieval"], default="all")
+    e.add_argument("--suite", choices=["all", "regression", "context", "memory",
+                                       "resume", "retrieval", "real", "embedder"], default="all")
     e.add_argument("--output", default=".mycoder/eval")
     e.add_argument("--benchmarks", default=None)
     e.add_argument("--config")

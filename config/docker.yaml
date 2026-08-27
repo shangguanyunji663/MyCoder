@@ -1,0 +1,42 @@
+# ============================================================
+# MyCoder — Docker 部署配置(docker-compose 里 mycoder 服务使用)
+# 与 config/default.yaml 的差异:模型指向 compose 网络内的 ollama 服务,
+# 数据目录全部放在 /app/.mycoder 下以便卷挂载,非交互环境用 allow 审批。
+# ============================================================
+
+model:
+  backend: local_openai
+  local_openai:
+    base_url: "http://ollama:11434/v1"   # compose 网络内的 ollama 容器
+    api_key: "ollama"
+    model: "qwen3.5:2b"                  # 与 ollama-init 拉取的模型保持一致
+    temperature: 0.0
+    timeout_seconds: 300                 # CPU 上 7B 以下模型偏慢,放宽超时
+    max_retries: 2
+
+workspace:
+  root: "/app/.mycoder/workspace"
+
+memory:
+  root: "/app/.mycoder/memory"
+
+checkpoint:
+  root: "/app/.mycoder/checkpoints"
+
+artifacts:
+  root: "/app/.mycoder/artifacts"
+
+logging:
+  file: "/app/.mycoder/harness.log"
+
+# API 服务非交互:无法弹出人工确认,高风险 shell 由白名单+黑名单兜底
+safety:
+  hitl_policy: allow
+
+api:
+  host: "0.0.0.0"
+  port: 8910
+
+# API 已提供 SSE 实时事件流,无需再导出 trace.json
+observability:
+  enabled: false

@@ -131,7 +131,7 @@ def clean_samples(raw: list[dict]) -> tuple[list[dict], dict]:
             stats["dropped_long"] += 1
             continue
         # 去重:基于 (instruction, output, context) 归一化后的哈希
-        key = hashlib.sha1(f"{instr}|||{output}|||{ctx}".encode("utf-8")).hexdigest()
+        key = hashlib.sha1(f"{instr}|||{output}|||{ctx}".encode()).hexdigest()
         if key in seen:
             stats["dup"] += 1
             continue

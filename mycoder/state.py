@@ -37,7 +37,22 @@ class Message:
             if self.tool_call_id:
                 msg["tool_call_id"] = self.tool_call_id
         if self.tool_calls:
-            msg["tool_calls"] = self.tool_calls
+            # Harness 内部使用扁平调用结构,发送给 OpenAI-compatible 服务时恢复
+            # 标准的 type/function 包装,否则下一轮请求会被严格服务拒绝。
+            calls = []
+            for call in self.tool_calls:
+                if "function" in call:
+                    calls.append(call)
+                    continue
+                calls.append({
+                    "id": call.get("id", ""),
+                    "type": "function",
+                    "function": {
+                        "name": call.get("name", ""),
+                        "arguments": call.get("arguments", "{}"),
+                    },
+                })
+            msg["tool_calls"] = calls
         return msg
 
 

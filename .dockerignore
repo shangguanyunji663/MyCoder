@@ -1,0 +1,28 @@
+# 构建镜像时排除的内容(保持镜像精简)
+.git
+.github
+.mimosa
+.mycoder
+.zcode
+.workbuddy
+.vscode
+.pytest_cache
+.mypy_cache
+.ruff_cache
+__pycache__/
+*.pyc
+*.egg-info/
+build/
+dist/
+
+# 运行时不需要的开发资产
+tests/
+examples/
+docs/
+benchmarks/
+kb_lora/
+generate_test_file.py
+CHANGELOG.md
+docker-compose.yml
+Dockerfile
+.dockerignore

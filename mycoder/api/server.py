@@ -18,6 +18,7 @@ from urllib.parse import urlparse
 from ..config import Config
 from ..models import MockBackend
 from ..state import TaskInput
+from .monitor_page import _MONITOR_PAGE, VUE_RUNTIME
 
 
 class _HarnessPool:
@@ -53,12 +54,13 @@ def make_handler(pool: _HarnessPool, config: Config):
     class Handler(BaseHTTPRequestHandler):
         server_version = "MyCoder/0.1"
 
-        def _send(self, code: int, obj, raw: str | None = None) -> None:
+        def _send(self, code: int, obj, raw: str | None = None,
+                  raw_content_type: str = "text/plain; charset=utf-8") -> None:
             self.send_response(code)
             body = raw if raw is not None else json.dumps(obj, ensure_ascii=False, indent=2,
                                                           default=str)
             if raw is not None:
-                self.send_header("Content-Type", "application/octet-stream")
+                self.send_header("Content-Type", raw_content_type)
             else:
                 self.send_header("Content-Type", "application/json; charset=utf-8")
             self.send_header("Content-Length", str(len(body.encode("utf-8"))))
@@ -74,8 +76,23 @@ def make_handler(pool: _HarnessPool, config: Config):
         def do_GET(self):
             parts = urlparse(self.path)
             seg = [s for s in parts.path.split("/") if s]
+            if parts.path == "/":
+                return self._send(200, {}, raw=_MONITOR_PAGE,
+                                  raw_content_type="text/html; charset=utf-8")
             if not seg:
                 return self._send(200, {"service": "mycoder", "version": "0.1"})
+            if parts.path == "/vue.global.prod.js" and VUE_RUNTIME.exists():
+                return self._send(200, {}, raw=VUE_RUNTIME.read_text(encoding="utf-8"),
+                                  raw_content_type="application/javascript")
+            if parts.path == "/api/runs":
+                root = Path(config.get("artifacts.root", ".mycoder/artifacts"))
+                runs = []
+                if root.exists():
+                    for d in root.iterdir():
+                        if d.is_dir():
+                            runs.append({"task_id": d.name, "status": "completed",
+                                         "event_count": 0})
+                return self._send(200, runs)
             if seg[0] == "health":
                 return self._send(200, {
                     "status": "ok", "model": config.model_backend,
@@ -84,8 +101,12 @@ def make_handler(pool: _HarnessPool, config: Config):
                 })
             if seg[0] == "tasks" and len(seg) == 2:
                 return self._task_status(seg[1])
+            if seg[0] == "api" and len(seg) == 3 and seg[1] == "run":
+                return self._task_status(seg[2])
             if seg[0] == "artifacts" and len(seg) == 3:
                 return self._artifact(seg[1], seg[2])
+            if seg[0] == "api" and len(seg) == 4 and seg[1] == "artifacts":
+                return self._artifact(seg[2], seg[3])
             if seg[0] == "memory":
                 return self._memory()
             if seg[0] == "checkpoints":
@@ -98,6 +119,13 @@ def make_handler(pool: _HarnessPool, config: Config):
         def do_POST(self):
             parts = urlparse(self.path)
             seg = [s for s in parts.path.split("/") if s]
+            if seg and seg[0] == "api" and len(seg) >= 2 and seg[1] == "run":
+                body = self._json_body()
+                try:
+                    out = pool.run_task(body)
+                    return self._send(200, out)
+                except Exception as e:
+                    return self._send(500, {"error": str(e)})
             if seg and seg[0] == "run":
                 body = self._json_body()
                 try:
@@ -114,7 +142,9 @@ def make_handler(pool: _HarnessPool, config: Config):
                 return self._send(404, {"error": "no such task"})
             mf = root / "metrics.json"
             metrics = json.loads(mf.read_text(encoding="utf-8")) if mf.exists() else {}
-            return self._send(200, {"task_id": task_id, "metrics": metrics,
+            return self._send(200, {"task_id": task_id, "status": "completed",
+                                    "result": {"status": "completed", "metrics": metrics},
+                                    "metrics": metrics,
                                     "artifacts": [f.name for f in root.iterdir()]})
 
         def _artifact(self, task_id: str, name: str):
