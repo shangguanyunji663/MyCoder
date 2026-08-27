@@ -3,9 +3,9 @@
 ## 项目概述
 
 **项目名称**: MyCoder - 本地 Coding Agent Harness  
-**开发语言**: Python 3.12+  
-**运行环境**: ML2 环境 (`D:\ANACONDA\envs\ML2`)  
-**测试环境**: pytest 9.0.2, Windows  
+**开发语言**: Python 3.10+(项目内置环境为 Python 3.11)  
+**运行环境**: 项目内置 Conda 独立环境 `.conda/`(仓库根目录下,由 Anaconda 管理;重建命令 `conda env create -p .conda -f environment.yml`)  
+**测试环境**: pytest 8.x, Windows  
 **测试结果**: **258 个测试用例全部通过** ✅ (17 个测试文件;2 个 fastembed 可选用例在离线环境跳过)
 
 ---
@@ -441,7 +441,7 @@ python generate_test_file.py
 ### 运行
 
 ```bash
-& "D:\ANACONDA\envs\ML2\python.exe" -m pytest tests/test_performance.py -v -s
+.conda/python.exe -m pytest tests/test_performance.py -v -s
 ```
 
 ---
@@ -453,7 +453,7 @@ python generate_test_file.py
 `examples/context_demo.py` 使用 `giant_test.py` 模拟 15 轮上下文膨胀:
 
 ```bash
-& "D:\ANACONDA\envs\ML2\python.exe" examples/context_demo.py
+.conda/python.exe examples/context_demo.py
 ```
 
 展示从 fold_old_turns → drop_stale_turns → truncate_long_content 的完整三层裁剪过程:
@@ -467,7 +467,7 @@ python generate_test_file.py
 `examples/show_folded.py` 展示经过 ContextManager 处理后送入模型的最终消息列表:
 
 ```bash
-& "D:\ANACONDA\envs\ML2\python.exe" examples/show_folded.py
+.conda/python.exe examples/show_folded.py
 ```
 
 ---
@@ -477,17 +477,16 @@ python generate_test_file.py
 ### 运行测试
 
 ```bash
-# 使用你的 Python 环境
-# 使用你的 Python 环境(需 pip install -e . 及 pytest)
+# 使用项目内置 Conda 环境(先激活: conda activate D:\PythonProject\mycoder\.conda)
 
-# 运行完整测试套件 (206 项)
-& "D:\ANACONDA\envs\ML2\python.exe" -m pytest tests/ -v
+# 运行完整测试套件 (258 项)
+.conda/python.exe -m pytest tests/ -v
 
 # 运行性能测试
-& "D:\ANACONDA\envs\ML2\python.exe" -m pytest tests/test_performance.py -v -s
+.conda/python.exe -m pytest tests/test_performance.py -v -s
 
 # 运行五层评测 (benchmark suite)
-& "D:\ANACONDA\envs\ML2\python.exe" -m mycoder eval --suite all --output .mycoder/eval
+.conda/python.exe -m mycoder eval --suite all --output .mycoder/eval
 ```
 
 ### 测试用例统计

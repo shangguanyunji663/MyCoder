@@ -176,20 +176,21 @@
 ## 运行方式
 
 ```bash
-# 使用 ML2 环境(已预装 pytest)
-conda activate ML2
+# 使用项目内置 Conda 环境 .conda/(Python 3.11,已预装全部依赖,无需安装)
+conda activate D:\PythonProject\mycoder\.conda
+# 或不激活直接用: .conda/python.exe <...>
 
 # 运行 demo
-& "D:\ANACONDA\envs\ML2\python.exe" examples/demo.py
+python examples/demo.py
 
 # 运行上下文治理 Demo
-& "D:\ANACONDA\envs\ML2\python.exe" examples/context_demo.py
+python examples/context_demo.py
 
 # 运行测试
-& "D:\ANACONDA\envs\ML2\python.exe" -m pytest tests/ -v
+python -m pytest tests/
 
 # 运行性能测试
-& "D:\ANACONDA\envs\ML2\python.exe" -m pytest tests/test_performance.py -v
+python -m pytest tests/test_performance.py -v
 
 # 运行评测
 python -m mycoder eval --suite all

@@ -62,7 +62,7 @@
   4. **恢复正确性**: checkpoint/resume + 漂移识别边界
   5. **检索召回**: exact/synonym/distractor/empty 四类查询的 recall@1/3/5 + MRR@5
   6. **真实任务 + LLM-as-judge**: Ollama 端到端代码任务、硬断言与独立模型评委
-- 12 个 benchmark 任务(回归/上下文/记忆/恢复) + 82 个检索查询(`retrieval.json` + `retrieval_extra.json`)
+- 26 个手写 benchmark 任务(回归17/上下文4/记忆4/恢复1) + 固定 seed 冻结基准 42 个任务 + 82 个检索查询(`retrieval.json` + `retrieval_extra.json`)
 - 258 项 pytest 自动化测试(17 个测试文件,含参数化安全边界与 Layer 6 离线用例)
 - 对照实验: 固定任务、固定数据、仅改变系统开关
 - 运行工件聚合: 可复现的评测报告(JSON + Markdown)
@@ -97,21 +97,32 @@
 ```
 mycoder/
 ├── README.md                    # 本文件
-├── pyproject.toml               # 项目元数据与依赖
-├── requirements.txt             # pip 依赖清单
-├── .gitignore                   # Git 忽略规则
+├── pyproject.toml               # 项目元数据与可选依赖组(api/vector/otel/dev)
+├── requirements.txt             # 核心运行时依赖(PyYAML)
+├── requirements-dev.txt         # 测试与开发工具(pytest/ruff/mypy)
+├── requirements-api.txt         # FastAPI + uvicorn + httpx
+├── requirements-vector.txt      # fastembed 真实嵌入器
+├── requirements-project.txt     # 完整环境 = dev+api+vector+可编辑安装
+├── environment.yml              # Conda 环境定义(重建项目内置 .conda 环境)
+├── Dockerfile / docker-compose.yml / config/docker.yaml / .dockerignore
+├── LICENSE                      # MIT
+├── .github/workflows/ci.yml     # CI: ruff / mypy / pytest(3.10-3.12) / Docker 构建
+├── .conda/                      # 项目内置 Conda 环境文件夹(gitignored,env create 重建)
 ├── generate_test_file.py        # 生成巨型测试文件的脚本
 ├── config/
-│   └── default.yaml             # 默认配置文件
+│   ├── default.yaml             # 默认配置文件
+│   └── docker.yaml              # Docker 部署场景配置
+├── kb_lora/                     # 企业知识库 LoRA 微调线(KB 数据集构建/SFT 导出/训练)
 ├── mycoder/                     # 核心代码包
 │   ├── __init__.py
 │   ├── __main__.py              # python -m mycoder 入口
-│   ├── cli.py                   # 命令行接口
+│   ├── cli.py                   # 命令行接口(run/resume/serve/eval/benchmark/artifacts/doctor/orchestrate)
 │   ├── config.py                # 配置加载与合并
 │   ├── state.py                 # 会话状态模型
 │   ├── util.py                  # 通用工具函数
 │   ├── artifacts.py             # 三类运行工件
 │   ├── tasks.py                 # 任务文件加载
+│   ├── sft_collector.py         # SFT 微调样本采集(sft_log 开关)
 │   ├── models/                  # 模型后端
 │   │   ├── base.py              # 抽象基类
 │   │   ├── mock.py              # MockBackend(脚本化)
@@ -148,61 +159,82 @@ mycoder/
 │   │   ├── monitor_page.py      # Vue 3 运行监控页(零构建)
 │   │   └── static/vue.global.prod.js # vendored Vue 3 运行时
 │   ├── eval/                    # 评测审计
-│   │   ├── benchmark.py         # benchmark 数据加载
+│   │   ├── benchmark.py         # benchmark 数据加载(固定 tasks.json + 冻结 generated)
 │   │   ├── experiment.py        # 对照实验原语
-│   │   └── runner.py            # 五层评测运行器
+│   │   ├── runner.py            # 五层离线评测运行器(Layer 1-5)
+│   │   ├── judge.py             # LLM-as-judge 评委(JSON 解析/兜底)
+│   │   └── real.py              # Layer 6 真实模型端到端评测(Ollama)
 │   └── cost.py                  # 按价目表核算每次运行成本
 ├── benchmarks/
-│   ├── tasks.json               # 12 个 benchmark 任务
-│   ├── retrieval.json           # 核心检索召回数据
-│   ├── retrieval_extra.json     # 4 个扩展领域,共 82 条查询
-│   └── real_tasks.json          # Layer 6 真实编码任务
+│   ├── tasks.json               # 26 个 benchmark 任务(回归17/上下文4/记忆4/恢复1)
+│   ├── tasks.generated.json     # 固定 seed 生成的冻结基准(42 个任务,提交入库保证可复现)
+│   ├── retrieval.json           # 核心检索召回数据(38 条查询)
+│   ├── retrieval_extra.json     # 扩展 4 领域 44 条查询(合计 82 条)
+│   └── real_tasks.json          # Layer 6 真实编码任务(4 个)
 ├── tests/                       # pytest 测试套件(17 个文件,258 项)
 │   ├── conftest.py
-│   ├── test_models.py           # 14 个用例
+│   ├── test_models.py           # 15 个用例
 │   ├── test_tools.py            # 21 个用例
 │   ├── test_sandbox.py          # 15 个用例
-│   ├── test_safety.py           # 27 个用例
+│   ├── test_safety.py           # 70 个用例(参数化安全边界展开)
 │   ├── test_context.py          # 19 个用例
 │   ├── test_memory.py           # 19 个用例
 │   ├── test_checkpoint.py       # 15 个用例
 │   ├── test_harness.py          # 15 个用例
 │   ├── test_backend.py          # 9 个用例(重试/退避/流式/usage)
 │   ├── test_cost.py             # 5 个用例(成本核算)
-│   ├── test_eval.py             # 14 个用例(五层评测)
+│   ├── test_eval.py             # 18 个用例(五层评测+benchmark 完整性)
 │   ├── test_observability.py    # 7 个用例(链路追踪/JSON 日志)
 │   ├── test_vectors.py          # 11 个用例(嵌入/BM25/混合检索)
 │   ├── test_api.py              # 3 个用例(FastAPI SSE)
 │   ├── test_orchestrator.py     # 4 个用例(并行/降级/事件)
+│   ├── test_real_eval.py        # 4 个用例(LLM-as-judge 解析/真实任务断言)
 │   └── test_performance.py      # 8 个用例(性能测试)
 ├── examples/                    # 使用示例
 │   ├── demo.py                  # 综合演示
-│   ├── giant_test.py            # 巨型测试文件(~4669行)
+│   ├── giant_test.py            # 巨型测试文件(~4669行,由 generate_test_file.py 生成)
 │   ├── context_demo.py          # 上下文治理演示(15轮模拟)
-│   └── show_folded.py           # 折叠后消息展示工具
+│   ├── show_folded.py           # 折叠后消息展示工具
+│   └── real_model_demo.py       # Layer 6 Ollama 真实模型端到端演示
 └── docs/                        # 文档
-    ├── ARCHITECTURE.md
-    ├── OUTLINE.md
-    ├── TESTING.md
-    ├── FINAL_SUMMARY.md
-    ├── LEARNING_GUIDE.md
-    └── IMPROVEMENT_PLAN.md
+    ├── ARCHITECTURE.md          # 架构设计
+    ├── OUTLINE.md               # 项目大纲
+    ├── TESTING.md               # 测试方法
+    ├── LEARNING_GUIDE.md        # 学习指南(初学者从这里开始)
+    ├── FINAL_SUMMARY.md         # 交付总结
+    ├── IMPROVEMENT_PLAN.md      # 改进计划
+    └── EVAL_HARDENING.md        # 评测加固方案
 ```
 
 ## 快速开始
 
-### 环境要求
-- Python 3.10+
-- PyYAML (核心运行时依赖,**唯一强制依赖**)
-- pytest (测试依赖,`pip install 'mycoder-harness[test]'`)
+### 内置 Conda 环境(推荐,开箱即用)
 
-### 安装依赖
+项目自带独立 Conda 环境文件夹 `.conda/`(由 Anaconda 以路径方式管理,Python 3.11),已预装全部依赖(含可选增强)并完成 `pip install -e .` 可编辑安装,**无需再执行任何安装步骤**:
 
 ```bash
-# 核心(零依赖,只需 PyYAML)
-python -m pip install -e .
+# 方式一:不激活直接用项目内解释器
+.conda/python.exe -m pytest tests/          # Git Bash / 前缀写法
+.conda\python.exe -m pytest tests/          # PowerShell / cmd
 
-# 可选增强(按需安装)
+# 方式二:激活后使用 python 命令
+conda activate D:\PythonProject\mycoder\.conda
+python -m pytest tests/
+```
+
+> 注意:`.conda/` 已加入 .gitignore,不会进入版本控制。换机器或删除该文件夹后,用一条命令完整重建:
+> `conda env create -p .conda -f environment.yml`
+
+### 手动搭建环境(可选,适用于新机器)
+
+若不想使用内置环境,也可以自行创建(Python 3.10+;核心运行时唯一强制依赖是 PyYAML):
+
+```bash
+# 一键重建与内置环境等价的完整环境
+conda env create -p .conda -f environment.yml
+
+# 或纯 pip 方式安装核心 + 按需的可选增强
+python -m pip install -e .                        # 核心(零依赖,只需 PyYAML)
 python -m pip install 'mycoder-harness[api]'      # FastAPI + SSE API
 python -m pip install 'mycoder-harness[vector]'   # 真实语义向量检索(fastembed)
 python -m pip install 'mycoder-harness[otel]'     # OpenTelemetry 桥接
@@ -225,8 +257,8 @@ python examples/show_folded.py
 ### 运行测试
 
 ```bash
-# 完整测试套件(单元 + 性能)
-python -m pytest tests/ -v
+# 完整测试套件(单元 + 性能,258 项)
+python -m pytest tests/
 
 # 仅运行性能测试
 python -m pytest tests/test_performance.py -v
@@ -315,6 +347,7 @@ python -m mycoder orchestrate --goal "..." --max-workers 4
 ## 核心模块详解
 
 详见:
+- [学习指南(初学者推荐起点)](docs/LEARNING_GUIDE.md)
 - [架构设计](docs/ARCHITECTURE.md)
 - [项目大纲](docs/OUTLINE.md)
 - [测试方法](docs/TESTING.md)

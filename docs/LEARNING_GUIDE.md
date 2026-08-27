@@ -4,7 +4,57 @@
 
 ---
 
+## 环境准备:项目内置 `.conda` 环境(动手前必读)
+
+本项目所有代码、测试、评测均基于**仓库内自带的 Conda 独立环境**,不再依赖系统 Python 或全局 Anaconda 的 base/命名环境。
+
+| 项目 | 说明 |
+|------|------|
+| 环境位置 | `D:\PythonProject\mycoder\.conda\`(相对仓库即 `<repo>\.conda`) |
+| 管理方式 | Anaconda 以**路径(prefix)**方式管理,环境名显示为完整路径 |
+| Python 版本 | 3.11(pyproject 声明兼容 3.10+,CI 用 3.10/3.11/3.12 矩阵验证) |
+| 预装内容 | 全部运行时依赖 + dev/api/vector 可选组 + 项目本体可编辑安装(`pip install -e .`) |
+| 版本控制 | `.conda/` 已加入 .gitignore,**不入库** |
+
+**日常使用**(三选一):
+
+```bash
+# 1) 激活后使用 python(PowerShell/cmd)
+conda activate D:\PythonProject\mycoder\.conda
+
+# 2) Git Bash 中激活
+source .conda/Scripts/activate
+
+# 3) 不激活,直接调用项目内解释器
+.conda/python.exe -m pytest tests/       # cmd/PowerShell 写法: .conda\python.exe ...
+```
+
+**验证环境可用**:
+
+```bash
+.conda/python.exe --version                       # 应输出 Python 3.11.x
+.conda/python.exe -m pytest tests/ --collect-only -q | tail -3   # 应列出 258 个用例
+```
+
+**环境坏了/换机器怎么重建**(一条命令,全部依赖自动就位):
+
+```bash
+conda env create -p .conda -f environment.yml
+```
+
+> `environment.yml` 使用 conda-forge 渠道的 python 3.11 + pip,再由 pip 安装 `requirements-project.txt`(其内部聚合 requirements-dev/api/vector 并执行 `-e .`)。IDE(VS Code/PyCharm)把解释器指向 `.conda/python.exe` 即可识别为 Conda 环境。
+
+---
+
 ## 第〇章 学习路线总览
+
+### 你处于哪个阶段?
+
+- **只想把它跑起来**:读上面的「环境准备」,然后按 README「快速开始」依次跑 Demo → 测试 → 评测,即可获得直观感受;
+- **想理解为什么这样设计**:精读本章 + [ARCHITECTURE.md](ARCHITECTURE.md) 的「核心设计原则」,再进入第 8 站主循环;
+- **想逐行吃透源码甚至做贡献**:按下面 10 站顺序完整走读,每站读完跑对应单测(`tests/test_<模块>.py`)验证理解。
+
+### 十站源码走读路线
 
 ```
 第 1 站  地基        config / state / util / artifacts    — 先把"骨架数据结构"立起来
@@ -18,6 +68,29 @@
 第 9 站  评测闭环    eval/benchmark + experiment + runner  — 用数据证明系统有效
 第 10 站 收尾        cli / api / examples / tests          — 对外接口与质量保障
 ```
+
+### 模块关系一览(谁依赖谁)
+
+```
+                    config.py(配置,被一切依赖)
+                          │
+        ┌─────────────────┼──────────────────┐
+        ▼                 ▼                  ▼
+  state.py(纯数据)   util.py(原子写/哈希)   artifacts.py(工件落盘)
+        │
+        ▼
+ models/ ──▶ agent/harness(主循环,中枢) ◀── checkpoint/(断点+漂移)
+                │   │   │
+   tools/ ──────┘   │   └────── memory/ (三层记忆+检索)
+   safety/ ─────────┘  context/ (上下文组装与裁剪)
+        │
+        ├─▶ observability/ (on_event → trace.json)
+        ├─▶ api/ (event_bus + fastapi_server,SSE)
+        ├─▶ eval/ (benchmark 数据 + runner 对照实验)
+        └─▶ agent/orchestrator.py (多子任务并行)
+```
+
+阅读时把握两条主线:**纵向**是"一次 run 调用穿过哪些层"(config→harness→context→model→safety→tool→memory),**横向**是"哪些机制横切所有步骤"(工件/追踪/断点/安全)。
 
 **核心设计哲学(贯穿全程)**:
 - **确定性优先**:同一输入必得同一输出,评测才能复现
@@ -915,6 +988,10 @@ Layer 4 恢复: checkpoint/resume + 漂移识别边界
 Layer 5 检索: 混合检索召回率(substring/vector/hybrid, recall@3)
 ```
 
+在离线五层之上还有两个**按需运行**的 suite(需本地模型或下载,不进 pytest):
+- **Layer 6 真实任务评测**:Ollama(qwen3.5:2b)端到端执行 + 硬断言 + LLM-as-judge(`--suite real`,demo 脚本 `examples/real_model_demo.py`)
+- **Layer 7 嵌入器对照**:FastEmbed bge-small vs 默认 HashingEmbedder 的检索收益对比(`--suite embedder`)
+
 **核心理念**:用同一个确定性 mock 轨迹驱动,唯一变量是 harness 系统开关 → 测的是**系统能力**,不是模型能力。
 
 ### 9.2 Layer 2 上下文治理评测(对照实验)
@@ -963,19 +1040,23 @@ def layer_resume(self, tasks):
 - 评测的"对照实验"思想:固定任务/数据,只改变系统开关
 - `experiment.py` 的 `compare_metrics()` 把两组指标做 diff → 可读的改进量
 
-### 9.5 Layer 5 检索召回评测(benchmarks/retrieval.json)
+### 9.5 Layer 5 检索召回评测(benchmarks/retrieval.json + retrieval_extra.json)
 
 ```python
 def layer_retrieval(self):
-    bench = json.load(open("benchmarks/retrieval.json"))
-    for q in bench["queries"]:          # 6 条同义/改写查询
-        hyb = retriever.search(q, mode="hybrid")
-        sub = retriever.search(q, mode="substring")
-        # 断言:hybrid recall@3 == 1.0,substring 在同义查询上 == 0.0
+    # 数据形态: {"tasks": [{"domain": "r01_auth", "queries": [...]}, ...]}
+    # 核心文件 retrieval.json 38 条 + 扩展 retrieval_extra.json 44 条 = 82 条查询,
+    # 覆盖 exact(精确)/synonym(同义改写)/distractor(干扰)/empty(空结果) 四类
+    for domain in bench["tasks"]:
+        for q in domain["queries"]:
+            hyb = retriever.search(q["text"], mode="hybrid")
+            sub = retriever.search(q["text"], mode="substring")
+            # 统计 recall@1/3/5 与 MRR@5,按 kind 分别聚合
 ```
 
 - **对照变量**:同一查询,`mode="hybrid"`(向量 cosine + BM25 加权) vs `mode="substring"`(字面匹配)
-- 关键结论:纯子串匹配对"同义改写"完全失效(recall@3 = 0%),混合检索 100% 命中 → 实证记忆检索需要语义向量
+- **82 条实测结论**(默认零依赖 HashingEmbedder):分类通过率 exact 23/23、synonym 29/29、distractor 11/11、empty 19/19;平均 recall@3 substring=28% vs hybrid=63%;MRR@5 substring=0.44 vs hybrid=0.98 —— 字面匹配在"同义改写"场景大幅掉队,混合检索显著占优 → 实证记忆检索需要语义向量
+- **Layer 7 延伸对照**:`python -m mycoder eval --suite embedder` 用 FastEmbed bge-small(真实神经嵌入,首次运行需下载模型)替换 HashingEmbedder 再跑同一数据集,量化升级收益
 
 ---
 
@@ -989,7 +1070,7 @@ def layer_retrieval(self):
 - `run`:运行单个任务
 - `resume`:从断点恢复
 - `serve`:启动 localhost API(`--impl stdlib|fastapi`)
-- `eval`:运行五层评测(`--suite all|retrieval`)
+- `eval`:运行评测(`--suite all|regression|context|memory|resume|retrieval|real|embedder`)
 - `orchestrate`:把复杂目标分解为子任务并行编排执行(`--goal` / `--max-workers`)
 
 ### 10.2 API
@@ -1009,8 +1090,10 @@ def layer_retrieval(self):
 # POST /api/run                  → 启动任务,返回 task_id
 # GET  /api/run/{id}             → 任务状态/结果快照
 # GET  /api/run/{id}/events      → SSE 流式事件(含 done 哨兵 + 15s 心跳保活)
+# GET  /api/runs                 → 全部任务列表与事件计数
 # GET  /api/artifacts/{id}/{name}→ 下载工件
-# GET  /health / /              → 健康检查 + 内置 trace 可视化页面
+# GET  /health / /              → 健康检查 + Vue 3 运行监控页(monitor_page.py,零构建)
+# GET  /vue.global.prod.js       → vendored Vue 运行时(static/,离线可用)
 ```
 
 - `TaskEventBus`(api/event_bus.py)是事件中枢:harness 的 `on_event` 回调把事件推入总线,既驱动 SSE,也写入 `trace.json`
@@ -1019,21 +1102,22 @@ def layer_retrieval(self):
 ### 10.3 测试套件
 
 ```
-test_models.py        (14)  MockBackend 脚本 progression/state恢复
+test_models.py        (15)  MockBackend 脚本 progression/state恢复
 test_tools.py         (21)  每种工具 execute + error case
 test_sandbox.py       (15)  路径逃逸拦截
-test_safety.py        (27)  参数校验/隔离/HITL/去重/脱敏
+test_safety.py        (70)  参数校验/隔离/HITL/去重/脱敏(参数化边界展开)
 test_context.py       (19)  token估算/折叠/硬限额
 test_memory.py        (19)  三层存储/去重/检索/持久化
 test_checkpoint.py    (15)  断点/漂移
 test_harness.py       (15)  主循环/安全拦截/恢复
-test_backend.py        (9)  MockBackend 脚本引擎
+test_backend.py        (9)  重试/退避/流式/usage 解析
 test_cost.py           (5)  成本计量
-test_eval.py          (14)  五层评测
+test_eval.py          (18)  五层评测+benchmark 数据完整性
 test_observability.py  (7)  Span/Tracer/trace.json/JSON 日志
 test_vectors.py       (11)  Embedding/VectorIndex/BM25/HybridRetriever
-test_api.py            (3)  FastAPI 路由/SSE/工件下载
+test_api.py            (3)  FastAPI 路由/SSE/监控页
 test_orchestrator.py   (4)  子任务分解/并行/降级
+test_real_eval.py      (4)  LLM-as-judge 解析/真实任务硬断言(离线部分)
 test_performance.py    (8)  压力测试(巨型文件)
 总计: 258 项(17 个测试文件,含参数化展开数量)
 ```
@@ -1073,9 +1157,11 @@ test_performance.py    (8)  压力测试(巨型文件)
 TaskInput → Harness.run() → [assemble → complete → check → execute → remember → checkpoint] → RunResult + Artifacts
 ```
 
-读完本指南后,建议按以下顺序实操:
-1. 运行 `pytest tests/ -v` 看全部测试通过
-2. 运行 `examples/context_demo.py` 看上下文治理效果
-3. 运行 `python -m mycoder eval --suite all` 看五层评测报告
-4. 阅读 `tests/test_harness.py` 理解主循环测试方式
-5. 尝试修改 `config/default.yaml` 的参数,观察行为变化
+读完本指南后,建议按以下顺序实操(均已预装,`conda activate D:\PythonProject\mycoder\.conda` 后直接运行):
+
+1. `.conda/python.exe -m pytest tests/` — 全部 258 项测试通过,建立"改动前基线"
+2. `python examples/context_demo.py` — 直观看到上下文治理的压缩效果
+3. `python -m mycoder eval --suite all --output .mycoder/eval` — 生成五层评测报告并打开 report.md
+4. `python -m mycoder serve` + 浏览器打开 http://127.0.0.1:8910/ — Vue 监控页提交任务,SSE 实时看事件流
+5. 阅读 `tests/test_harness.py` 理解主循环测试方式
+6. 尝试修改 `config/default.yaml` 的参数(如 budget_tokens),重跑评测观察行为变化
