@@ -54,15 +54,19 @@
 - 评测指标: 回归任务 100% 通过率,100% 预算内完成率
 
 ### 6. 评测审计闭环
-- 五层离线系统评测 + Layer 6 真实模型评测(区分系统能力与模型能力):
+- 五层离线系统评测 + Layer 6 真实模型评测 + Layer 6b 裸基线对照(区分系统能力与模型能力):
   1. **Harness 回归**: 运行时稳定性(能完成、工件齐全、断言满足)
   2. **上下文治理**: 预算裁剪收益(治理 vs 不治理的 prompt 长度差)
   3. **记忆收益**: follow-up 重复读文件归零、正确率
   4. **恢复正确性**: checkpoint/resume + 漂移识别边界
   5. **检索召回**: exact/synonym/distractor/empty 四类查询的 recall@1/3/5 + MRR@5
   6. **真实任务 + LLM-as-judge**: Ollama 端到端代码任务、硬断言与独立模型评委
+  6b. **裸模型基线对照**: 固定模型与任务集,只改"有没有 harness"——
+      single_shot(单次调用,无工具循环)与 naive_loop(朴素 tool-calling 循环,
+      无治理/记忆/断点/安全链)两条裸基线臂,复用 Layer 6 同一任务集与硬断言;
+      若存在 Layer 6 报告则自动并排成三臂对照,直接度量 harness 的增量价值
 - 26 个手写 benchmark 任务(回归17/上下文4/记忆4/恢复1) + 固定 seed 冻结基准 42 个任务 + 82 个检索查询(`retrieval.json` + `retrieval_extra.json`)
-- 262 项 pytest 自动化测试(17 个测试文件,含参数化安全边界与 Layer 6 离线用例)
+- 268 项 pytest 自动化测试(18 个测试文件,含参数化安全边界与 Layer 6/6b 离线用例)
 - 对照实验: 固定任务、固定数据、仅改变系统开关
 - 运行工件聚合: 可复现的评测报告(JSON + Markdown)
 
@@ -162,7 +166,8 @@ mycoder/
 │   │   ├── experiment.py        # 对照实验原语
 │   │   ├── runner.py            # 五层离线评测运行器(Layer 1-5)
 │   │   ├── judge.py             # LLM-as-judge 评委(JSON 解析/兜底)
-│   │   └── real.py              # Layer 6 真实模型端到端评测(Ollama)
+│   │   ├── real.py              # Layer 6 真实模型端到端评测(Ollama)
+│   │   └── raw_baseline.py      # Layer 6b 裸基线对照(single_shot/naive_loop)
 │   └── cost.py                  # 按价目表核算每次运行成本
 ├── benchmarks/
 │   ├── tasks.json               # 26 个 benchmark 任务(回归17/上下文4/记忆4/恢复1)
@@ -170,7 +175,7 @@ mycoder/
 │   ├── retrieval.json           # 核心检索召回数据(38 条查询)
 │   ├── retrieval_extra.json     # 扩展 4 领域 44 条查询(合计 82 条)
 │   └── real_tasks.json          # Layer 6 真实编码任务(4 个)
-├── tests/                       # pytest 测试套件(17 个文件,262 项)
+├── tests/                       # pytest 测试套件(18 个文件,268 项)
 │   ├── conftest.py
 │   ├── test_models.py           # 15 个用例
 │   ├── test_tools.py            # 21 个用例
@@ -188,6 +193,7 @@ mycoder/
 │   ├── test_api.py              # 7 个用例(FastAPI SSE/后端切换/双跑对照)
 │   ├── test_orchestrator.py     # 4 个用例(并行/降级/事件)
 │   ├── test_real_eval.py        # 4 个用例(LLM-as-judge 解析/真实任务断言)
+│   ├── test_real_baseline.py    # 6 个用例(Layer 6b 裸基线两臂/工具白名单/三臂对照)
 │   └── test_performance.py      # 8 个用例(性能测试)
 ├── examples/                    # 使用示例
 │   ├── demo.py                  # 综合演示
@@ -257,7 +263,7 @@ python examples/show_folded.py
 ### 运行测试
 
 ```bash
-# 完整测试套件(单元 + 性能,262 项)
+# 完整测试套件(单元 + 性能,268 项)
 python -m pytest tests/
 
 # 仅运行性能测试
@@ -281,6 +287,11 @@ cat .mycoder/eval/report.md
 
 # Layer 6: Ollama 真实模型任务(qwen3.5:2b)
 python examples/real_model_demo.py
+
+# Layer 6b: 裸模型基线对照(需 model.backend=local_openai;
+# 先跑 Layer 6 可在同目录获得 harness 参考臂,形成三臂对照)
+python -m mycoder eval --suite real --output .mycoder/real
+python -m mycoder eval --suite real_baseline --output .mycoder/real
 
 # Layer 7: 可选真实嵌入器对照(首次运行会下载 bge-small)
 python -m mycoder eval --suite embedder --output .mycoder/embedder
@@ -384,6 +395,15 @@ python -m mycoder orchestrate --goal "..." --max-workers 4
 - 实测运行 4 个编码任务：4/4 完成，3/4 硬断言通过；总耗时约 963 秒。
 - qwen3.5:2b 的部分评委请求超时，最终 LLM-as-judge 通过率为 0/4；该结果如实保留在 `.mycoder/real/real_report.json`，不把硬断言通过伪装成模型评委通过。
 - 运行命令：`python examples/real_model_demo.py`；更大模型或更长评委超时配置可获得更稳定的 judge 结果。
+
+### Layer 6b 裸模型基线对照(需 Ollama)
+- 回答"harness 比不用它好多少":固定模型与 `benchmarks/real_tasks.json` 任务集,
+  跑 single_shot(单次调用,无工具循环)与 naive_loop(朴素 tool-calling 循环,
+  无上下文治理/记忆/断点/安全链)两条裸基线臂,并与 Layer 6 的 harness 结果并排三臂对照。
+- 三臂共用同一套硬断言(`EvalRunner._check_expect`)与指标口径(token/成本/耗时),
+  报告落盘 `real_baseline_report.json`,`comparison` 字段逐任务并排三臂通过情况。
+- 基线臂的低通过率是预期测量结果而非失败;具体数字以实际运行为准:
+  `python -m mycoder eval --suite real_baseline --output .mycoder/real`。
 
 ### 安全边界
 - 回归任务: 由离线 benchmark 持续验证(含正例、负例、边界)

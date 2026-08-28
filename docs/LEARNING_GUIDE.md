@@ -33,7 +33,7 @@ source .conda/Scripts/activate
 
 ```bash
 .conda/python.exe --version                       # 应输出 Python 3.11.x
-.conda/python.exe -m pytest tests/ --collect-only -q | tail -3   # 应列出 262 个用例
+.conda/python.exe -m pytest tests/ --collect-only -q | tail -3   # 应列出 268 个用例
 ```
 
 **环境坏了/换机器怎么重建**(一条命令,全部依赖自动就位):
@@ -988,8 +988,9 @@ Layer 4 恢复: checkpoint/resume + 漂移识别边界
 Layer 5 检索: 混合检索召回率(substring/vector/hybrid, recall@3)
 ```
 
-在离线五层之上还有两个**按需运行**的 suite(需本地模型或下载,不进 pytest):
+在离线五层之上还有几个**按需运行**的 suite(需本地模型或下载,不进 pytest):
 - **Layer 6 真实任务评测**:Ollama(qwen3.5:2b)端到端执行 + 硬断言 + LLM-as-judge(`--suite real`,demo 脚本 `examples/real_model_demo.py`)
+- **Layer 6b 裸模型基线对照**:固定模型与 Layer 6 同一任务集,只改"有没有 harness"——`single_shot`(单次调用,无工具循环)与 `naive_loop`(朴素 tool-calling 循环,无治理/记忆/断点/安全链)两条裸基线臂;存在 Layer 6 报告时自动并排三臂对照,直接度量 harness 的增量价值(`--suite real_baseline`,配置节 `eval.real_baseline`,实现 `mycoder/eval/raw_baseline.py`)
 - **Layer 7 嵌入器对照**:FastEmbed bge-small vs 默认 HashingEmbedder 的检索收益对比(`--suite embedder`)
 
 **核心理念**:用同一个确定性 mock 轨迹驱动,唯一变量是 harness 系统开关 → 测的是**系统能力**,不是模型能力。
@@ -1070,7 +1071,7 @@ def layer_retrieval(self):
 - `run`:运行单个任务
 - `resume`:从断点恢复
 - `serve`:启动 localhost API(`--impl stdlib|fastapi`)
-- `eval`:运行评测(`--suite all|regression|context|memory|resume|retrieval|real|embedder`)
+- `eval`:运行评测(`--suite all|regression|context|memory|resume|retrieval|real|real_baseline|embedder`)
 - `orchestrate`:把复杂目标分解为子任务并行编排执行(`--goal` / `--max-workers`)
 
 ### 10.2 API
@@ -1119,8 +1120,9 @@ test_vectors.py       (11)  Embedding/VectorIndex/BM25/HybridRetriever
 test_api.py            (7)  FastAPI 路由/SSE/监控页/后端切换/双跑对照
 test_orchestrator.py   (4)  子任务分解/并行/降级
 test_real_eval.py      (4)  LLM-as-judge 解析/真实任务硬断言(离线部分)
+test_real_baseline.py  (6)  Layer 6b 裸基线两臂/工具白名单/三臂对照(离线部分)
 test_performance.py    (8)  压力测试(巨型文件)
-总计: 262 项(17 个测试文件,含参数化展开数量)
+总计: 268 项(18 个测试文件,含参数化展开数量)
 ```
 
 ### 10.4 性能测试
@@ -1160,7 +1162,7 @@ TaskInput → Harness.run() → [assemble → complete → check → execute →
 
 读完本指南后,建议按以下顺序实操(均已预装,`conda activate D:\PythonProject\mycoder\.conda` 后直接运行):
 
-1. `.conda/python.exe -m pytest tests/` — 全部 262 项测试通过,建立"改动前基线"
+1. `.conda/python.exe -m pytest tests/` — 全部 268 项测试通过,建立"改动前基线"
 2. `python examples/context_demo.py` — 直观看到上下文治理的压缩效果
 3. `python -m mycoder eval --suite all --output .mycoder/eval` — 生成五层评测报告并打开 report.md
 4. `python -m mycoder serve` + 浏览器打开 http://127.0.0.1:8910/ — Vue 监控页提交任务,SSE 实时看事件流

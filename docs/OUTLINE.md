@@ -69,9 +69,12 @@
 - `monitor_page.py`: 本地 vendored Vue 3 实时运行监控页
 
 ### 11. 评测审计 (eval/)
-- `benchmark.py`: benchmark 数据加载(12 个任务 + 检索用例)
+- `benchmark.py`: benchmark 数据加载(26 个手写任务 + 42 个冻结生成任务 + 检索用例)
 - `experiment.py`: 对照实验原语(compare_metrics, format_delta)
-- `runner.py`: EvalRunner(五层评测运行器)
+- `runner.py`: EvalRunner(五层离线评测运行器,Layer 1-5)
+- `judge.py`: LLM-as-judge 评委(严格 JSON 结论/解析兜底)
+- `real.py`: Layer 6 真实模型端到端评测(Ollama)
+- `raw_baseline.py`: Layer 6b 裸基线对照(single_shot / naive_loop 两臂,可与 Layer 6 并排三臂对照)
 
 ### 12. 成本核算 (cost.py)
 - 按 `model.pricing` 价目表核算每次运行的 token 成本
@@ -82,18 +85,20 @@
 
 ## Benchmark 任务设计
 
-12 个固定任务,按评测层打标签:
+26 个固定任务,按评测层打标签(另有固定 seed 冻结基准 tasks.generated.json,42 个任务,加载时合并):
 
-### Regression (4 个)
+### Regression (17 个)
 - t01_create_file: 创建文件
 - t02_read_file: 读取文件
 - t03_edit_file: 编辑文件
 - t04_list_grep: 列出 + 搜索
+- (其余 13 个含正例/负例/边界展开,完整清单见 benchmarks/tasks.json 或 docs/TESTING.md)
 
-### Context (3 个)
+### Context (4 个)
 - t05_long_refactor: 通读大文件(长上下文)
 - t06_long_search: 多轮检索(长上下文)
 - t07_long_multifile: 多模块文档补齐(长上下文)
+- t26c_budget_edge: 贴边预算(紧预算下仍 100% 预算内)
 
 ### Memory (4 个)
 - t08_build_utils: 父任务(创建 utils.py)
@@ -119,6 +124,18 @@
 - 漂移识别准确率: 100%(5/5 漂移检出, 5/5 无漂移正确)
 - 恢复后完成率: 100%
 
+### 检索召回(Layer 5, n=82)
+- 平均 recall@1/3/5: substring = 28%/28%/28%, hybrid = 61%/63%/63%
+- MRR@5: substring = 0.44, hybrid = 0.98
+
+### Layer 6 真实模型端到端(Ollama qwen3.5:2b)
+- 4 个编码任务: 4/4 完成, 3/4 硬断言通过(LLM-as-judge 因评委超时 0/4,如实保留)
+
+### Layer 6b 裸模型基线对照
+- 固定模型与任务集,只改"有没有 harness";single_shot / naive_loop 两臂低通过率
+  是预期测量结果,与 Layer 6 并排形成三臂对照;具体数字以实际运行为准
+  (`eval --suite real_baseline`,需 Ollama)
+
 ### 安全边界
 - 回归任务通过率: 100%
 - 参数校验拦截: 100%
@@ -136,41 +153,49 @@
 - mycoder/safety/: guard.py, redact.py, __init__.py
 - mycoder/agent/: harness.py, __init__.py
 - mycoder/api/: server.py, __init__.py
-- mycoder/eval/: benchmark.py, experiment.py, runner.py, __init__.py
+- mycoder/eval/: benchmark.py, experiment.py, runner.py, judge.py, real.py, raw_baseline.py, __init__.py
 
-### 测试 (17 个测试文件,262 个测试用例)
+### 测试 (18 个测试文件,268 个测试用例)
 - tests/conftest.py
-- tests/test_models.py (14 个用例)
+- tests/test_models.py (15 个用例)
 - tests/test_tools.py (21 个用例)
 - tests/test_sandbox.py (15 个用例)
-- tests/test_safety.py (27 个用例)
+- tests/test_safety.py (70 个用例)
 - tests/test_context.py (19 个用例)
 - tests/test_memory.py (19 个用例)
 - tests/test_checkpoint.py (15 个用例)
 - tests/test_harness.py (15 个用例)
 - tests/test_backend.py (9 个用例 — 重试/退避/流式/usage)
 - tests/test_cost.py (5 个用例 — 成本核算)
-- tests/test_eval.py (14 个用例 — 五层评测)
+- tests/test_eval.py (18 个用例 — 五层评测)
 - tests/test_observability.py (7 个用例 — 链路追踪/JSON 日志)
 - tests/test_vectors.py (11 个用例 — 嵌入/BM25/混合检索)
 - tests/test_api.py (7 个用例 — FastAPI SSE/后端切换/双跑对照)
 - tests/test_orchestrator.py (4 个用例 — 并行/降级/事件)
+- tests/test_real_eval.py (4 个用例 — LLM-as-judge/真实任务断言)
+- tests/test_real_baseline.py (6 个用例 — Layer 6b 裸基线两臂/工具白名单/三臂对照)
 - tests/test_performance.py (8 个用例 — 性能测试)
 
 ### 配置与文档
 - config/default.yaml
 - benchmarks/tasks.json
+- CHANGELOG.md
 - README.md
 - docs/ARCHITECTURE.md
 - docs/OUTLINE.md (本文件)
 - docs/TESTING.md
 - docs/FINAL_SUMMARY.md
+- docs/LEARNING_GUIDE.md
+- docs/EVAL_HARDENING.md
+- docs/IMPROVEMENT_PLAN.md
+- docs/WEB_BACKEND_SWITCH.md
 
 ### 示例与工具
 - examples/demo.py (综合演示)
 - examples/giant_test.py (巨型测试文件, ~4669 行)
 - examples/context_demo.py (上下文治理演示, 15 轮模拟)
 - examples/show_folded.py (折叠后消息展示)
+- examples/real_model_demo.py (Layer 6 Ollama 真实模型端到端演示)
 - generate_test_file.py (生成 giant_test.py 的脚本)
 
 ## 运行方式
@@ -194,6 +219,9 @@ python -m pytest tests/test_performance.py -v
 
 # 运行评测
 python -m mycoder eval --suite all
+
+# 运行 Layer 6b 裸基线对照(需 model.backend=local_openai,即本地 Ollama)
+python -m mycoder eval --suite real_baseline --output .mycoder/real
 
 # 启动 API(标准库,零依赖)
 python -m mycoder serve

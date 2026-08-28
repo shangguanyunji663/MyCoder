@@ -5,7 +5,7 @@
   resume      从断点恢复一个任务
   serve       启动 localhost HTTP API(127.0.0.1:{port},--impl stdlib|fastapi)
   orchestrate 把复杂目标分解为子任务并行编排执行
-  eval        运行评测(h regression | context | memory | resume | retrieval | all)
+  eval        运行评测(h regression | context | memory | resume | retrieval | real | real_baseline | all)
   benchmark   列出内置 benchmark 任务
   artifacts   查看/聚合某任务的运行工件
   doctor      打印环境诊断(帮助新手确认配置与依赖)
@@ -191,7 +191,8 @@ def main(argv=None) -> int:
 
     e = sub.add_parser("eval", help="运行评测")
     e.add_argument("--suite", choices=["all", "regression", "context", "memory",
-                                       "resume", "retrieval", "real", "embedder"], default="all")
+                                       "resume", "retrieval", "real", "real_baseline",
+                                       "embedder"], default="all")
     e.add_argument("--output", default=".mycoder/eval")
     e.add_argument("--benchmarks", default=None)
     e.add_argument("--config")

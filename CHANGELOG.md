@@ -7,6 +7,7 @@
 ## [Unreleased]
 
 ### Added
+- Layer 6b 裸模型基线对照(`mycoder/eval/raw_baseline.py`):固定模型与 `benchmarks/real_tasks.json` 任务集,只改"有没有 harness"——`single_shot`(单次调用,目标与 setup 文件内联,无工具循环)与 `naive_loop`(朴素 tool-calling 循环,刻意不用上下文治理/结构化记忆/checkpoint/安全审批链/去重/工件系统,仅保留 Workspace 文件边界;`shell_exec`/`memory_query` 因依赖审批链与记忆系统不暴露)两条裸基线臂。复用 Layer 6 同一套硬断言(`EvalRunner._check_expect`)与 token/成本/耗时口径;存在 Layer 6 的 `real_report.json` 时报告 `comparison` 字段自动并排三臂对照。`eval --suite real_baseline` 独立可跑,配置节 `eval.real_baseline`;mock 后端下优雅跳过。新增 `tests/test_real_baseline.py`(6 项离线用例),测试总数 262 → 268(18 个文件)。
 - Web 监控页后端自由切换 + 一键双跑对照:`POST /api/run` 新增可选 `backend` 字段(三档:跟随配置/mock/local_openai;携带 script 仍锁定 Mock);新增 `POST /api/compare` 同一目标自动提交 mock+ollama 两臂任务并返回 `compare_id`;任务快照与列表透出 `backend/arm/compare_group`;监控页新增「执行后端」选择、「▶ 双跑对比」按钮与两臂指标并排对比表。设计记录见 `docs/WEB_BACKEND_SWITCH.md`。
 - 环境工程化：仓库内置 Conda prefix 独立环境 `.conda/`(Python 3.11,由 Anaconda 管理,`.gitignore` 排除不入库),新增 `environment.yml` 与 `requirements-{dev,api,vector,project}.txt` 分拆清单;一条 `conda env create -p .conda -f environment.yml` 即可在任意机器完整重建。
 - 企业化改造：新增 MIT LICENSE、Docker Compose（Ollama + FastAPI）、82 条检索评测集、Layer 6 Ollama 真实任务 + LLM-as-judge、Hashing/FastEmbed 对照入口，以及本地 vendored Vue 3 运行监控页。

@@ -6,7 +6,7 @@
 **开发语言**: Python 3.10+(项目内置环境为 Python 3.11)  
 **运行环境**: 项目内置 Conda 独立环境 `.conda/`(仓库根目录下,由 Anaconda 管理;重建命令 `conda env create -p .conda -f environment.yml`)  
 **测试环境**: pytest 8.x, Windows  
-**测试结果**: **262 个测试用例** ✅ (17 个测试文件;当前基线 260 passed + 2 skipped,2 个 fastembed 可选用例在离线环境跳过)
+**测试结果**: **268 个测试用例** ✅ (18 个测试文件;当前基线 266 passed + 2 skipped,2 个 fastembed 可选用例在离线环境跳过)
 
 ---
 
@@ -86,9 +86,10 @@ mycoder/                          # 项目根目录
 │       ├── runner.py             # EvalRunner (五层评测运行器)
 │       ├── judge.py              # LLM-as-judge 评委 (严格 JSON 结论/解析兜底)
 │       ├── real.py               # Layer 6 真实模型端到端评测 (Ollama)
+│       ├── raw_baseline.py       # Layer 6b 裸基线对照 (single_shot / naive_loop 两臂 + 三臂对照)
 │       └── __init__.py
 │
-├── tests/                        # pytest 测试套件 (17 个测试文件, 262 个用例)
+├── tests/                        # pytest 测试套件 (18 个测试文件, 268 个用例)
 │   ├── conftest.py               # 共享 fixtures (tmp_path_factory_override, config, workspace, make_harness)
 │   ├── test_models.py            # 15 个测试用例
 │   ├── test_tools.py            # 21 个测试用例
@@ -106,6 +107,7 @@ mycoder/                          # 项目根目录
 │   ├── test_api.py               # 7 个测试用例 (FastAPI SSE/后端切换/双跑对照)
 │   ├── test_orchestrator.py      # 4 个测试用例 (并行/降级/事件)
 │   ├── test_real_eval.py         # 4 个测试用例 (LLM-as-judge 解析/真实任务断言)
+│   ├── test_real_baseline.py     # 6 个测试用例 (Layer 6b 裸基线两臂/工具白名单/三臂对照)
 │   └── test_performance.py       # 8 个测试用例 (性能测试)
 │
 ├── examples/                     # 使用示例
@@ -482,7 +484,7 @@ python generate_test_file.py
 ```bash
 # 使用项目内置 Conda 环境(先激活: conda activate D:\PythonProject\mycoder\.conda)
 
-# 运行完整测试套件 (262 项)
+# 运行完整测试套件 (268 项)
 .conda/python.exe -m pytest tests/ -v
 
 # 运行性能测试
@@ -512,9 +514,10 @@ python generate_test_file.py
 | test_api.py | 7 | health/监控页, 提交→SSE→完成事件, 未知任务 404, 后端字段非法 400, 显式 local_openai 工厂注入, script 锁定 Mock, 双跑对照两臂元数据 |
 | test_orchestrator.py | 4 | 并行编排, 失败降级(partial), 默认 planner 单子任务, 事件发射 |
 | test_real_eval.py | 4 | LLM-as-judge JSON 解析/兜底, 真实任务硬断言与 mock 跳过(离线部分) |
+| test_real_baseline.py | 6 | Layer 6b 代码块 path 解析, single_shot 落盘断言, naive_loop 工具执行与指标, 工具白名单排除 shell/memory, 三臂对照 harness 参考, mock 优雅跳过 |
 | test_performance.py | 8 | 文件读取/列表/Grep/记忆/上下文/断点/工作区/工具注册 性能测试 |
 
-**总计**: 262 个测试用例(17 个测试文件)
+**总计**: 268 个测试用例(18 个测试文件)
 
 ---
 
@@ -590,7 +593,7 @@ python generate_test_file.py
 ✅ **7 类工具** — file_read/write/edit/list, grep, shell, memory_query  
 ✅ **3 类运行工件** — trajectory.jsonl(轨迹) + checkpoint.json(断点) + metrics.json+report.md(报告)  
 ✅ **26 个 Benchmark 任务** — 手写任务 regression(17)/context(4)/memory(4)/resume(1);另有固定 seed 冻结基准 tasks.generated.json(42 个任务)入库保证可复现  
-✅ **262 项自动化测试** — 覆盖全部模块 + 性能测试, 当前基线 260 passed + 2 skipped  
+✅ **268 项自动化测试** — 覆盖全部模块 + 性能测试, 当前基线 266 passed + 2 skipped  
 ✅ **8 维度性能测试** — 使用巨型文件(~4669行)进行压力测试  
 ✅ **上下文治理演示** — context_demo.py 展示三层裁剪策略  
 ✅ **完整文档** — README / ARCHITECTURE / OUTLINE / TESTING / FINAL_SUMMARY  

@@ -18,7 +18,7 @@ python -m pytest tests/
 
 ## 测试架构
 
-MyCoder 采用**七层评测体系** + **性能测试套件**，刻意区分"模型能力"与"系统能力"：
+MyCoder 采用**分层评测体系**(Layer 1-7,含 Layer 6b,见下) + **性能测试套件**，刻意区分"模型能力"与"系统能力"：
 
 ```
 Layer 1: Harness 回归测试    ─── 验证运行稳定性(能完成、工件齐全、断言满足)
@@ -27,13 +27,15 @@ Layer 3: 记忆收益评测        ─── 验证 follow-up 阶段重复读文
 Layer 4: 恢复正确性评测      ─── 验证 checkpoint/resume + 工作区漂移识别边界
 Layer 5: 检索召回评测        ─── 验证 82 条 exact/synonym/distractor/empty 查询的 recall@1/3/5 + MRR
 Layer 6: 真实任务评测        ─── Ollama 端到端执行 + 硬断言 + LLM-as-judge
+Layer 6b: 裸模型基线对照     ─── 固定模型与任务集,只改"有没有 harness"
+                                 (single_shot / naive_loop 两臂 + 三臂对照)
 Layer 7: 嵌入器对照          ─── HashingEmbedder vs FastEmbed bge-small(可选下载)
 
 性能测试套件(独立于评测层):
   ─── 使用巨型文件(~4669行)对 8 个维度进行压力测试
 ```
 
-注意:Layer 6 / Layer 7 属于**按需运行的评测 suite**(CLI `--suite real` / `--suite embedder`,需要本地模型或联网下载)，不在 pytest 自动化范围内;pytest 中只包含它们的离线单测(`tests/test_real_eval.py`)。
+注意:Layer 6 / Layer 6b / Layer 7 属于**按需运行的评测 suite**(CLI `--suite real` / `--suite real_baseline` / `--suite embedder`,需要本地模型或联网下载)，不在 pytest 自动化范围内;pytest 中只包含它们的离线单测(`tests/test_real_eval.py`、`tests/test_real_baseline.py`)。
 
 ## 测试数据
 
@@ -71,7 +73,7 @@ Layer 7: 嵌入器对照          ─── HashingEmbedder vs FastEmbed bge-sma
 ```bash
 # 激活项目内置 .conda 环境(见文首),然后:
 
-# 运行完整测试套件(262 项)
+# 运行完整测试套件(268 项)
 python -m pytest tests/
 
 # 运行特定测试文件
@@ -290,6 +292,7 @@ python -m mycoder eval --suite retrieval
 - ✅ cost: 按价目表核算运行成本
 - ✅ eval: 五层评测、benchmark 数据完整性
 - ✅ real_eval: LLM-as-judge 解析与真实任务硬断言(离线部分)
+- ✅ real_baseline: Layer 6b 裸基线两臂(single_shot 代码块提取/naive_loop 工具循环)、工具白名单、三臂对照(离线部分)
 - ✅ performance: 8 维度性能压力测试
 
 ### 测试用例统计(2026-08 实测 pytest --collect-only)
@@ -312,9 +315,10 @@ python -m mycoder eval --suite retrieval
 | test_api.py | 7 | health/Vue 监控页, 提交→SSE→完成事件, 未知任务 404, 后端字段非法 400, 显式 local_openai 工厂注入, script 锁定 Mock, 双跑对照两臂元数据 |
 | test_orchestrator.py | 4 | 并行编排, 失败降级(partial), 默认 planner 单子任务, 事件发射 |
 | test_real_eval.py | 4 | LLM-as-judge JSON 解析/兜底, 真实任务硬断言与 mock 跳过 |
+| test_real_baseline.py | 6 | Layer 6b 代码块 path 解析, single_shot 落盘断言, naive_loop 工具执行与指标, 工具白名单排除 shell/memory, 三臂对照 harness 参考, mock 优雅跳过 |
 | test_performance.py | 8 | 文件读取/列表/Grep/记忆/上下文/断点/工作区/工具注册 性能测试 |
 
-**总计**: 262 个测试用例，17 个测试文件(含参数化展开数量);当前基线结果 260 passed + 2 skipped。
+**总计**: 268 个测试用例，18 个测试文件(含参数化展开数量);当前基线结果 266 passed + 2 skipped。
 
 ## 确定性保证
 所有测试使用：
@@ -331,7 +335,7 @@ python -m mycoder eval --suite retrieval
 ```bash
 # 确保在 mycoder 项目根目录(即 pyproject.toml 所在目录)执行,
 # 并确认使用的是项目内置解释器:
-.conda/python.exe -m pytest tests/ --collect-only    # 应列出 262 项
+.conda/python.exe -m pytest tests/ --collect-only    # 应列出 268 项
 ```
 
 ### 导入错误

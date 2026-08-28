@@ -101,6 +101,12 @@ class EvalRunner:
                 self.base_config, output_dir=self.output_dir,
                 tasks_path=self.base_config.get("eval.real.tasks")
             ).run()
+        if suite == "real_baseline":
+            from .raw_baseline import RawBaselineRunner
+            reports["real_baseline"] = RawBaselineRunner(
+                self.base_config, output_dir=self.output_dir,
+                tasks_path=self.base_config.get("eval.real_baseline.tasks")
+            ).run()
         self._append_history(reports)
         return reports
 
