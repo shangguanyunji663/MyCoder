@@ -3,6 +3,10 @@
 > 目标：把 MyCoder 从「思路良好的个人 demo」升级为「经得起面试官深挖的企业级 Agent Harness」。
 > 本文档是改造的单一事实来源（Single Source of Truth）：每个 Phase 完成后更新状态与结论，
 > 配合 `CHANGELOG.md`（与 git 提交一一对应）构成完整的工程决策记录。
+>
+> **状态注记（2026-08-28）**：文中提及的 GitHub Actions CI 已移除（远程质量门暂时下线）；
+> 相关表述为历史过程记录。当前质量门以本地 `ruff check` / `mypy` / `pytest` 为准，
+> 命令见 `docs/TESTING.md` 的「质量门(本地执行)」一节。
 
 ## 0. 背景评估（改造前的差距分析）
 

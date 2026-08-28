@@ -26,6 +26,9 @@ coverage.xml
 .venv/
 venv/
 .conda/
+# CI 复刻用临时环境(py310/py312/mypy 最小依赖)
+.conda-*/
+.pytest_tmp/
 
 # ---- 5. MyCoder 自身运行期产物(checkpoint、评测工作区、嵌入缓存、日志) ----
 .mycoder/

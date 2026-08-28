@@ -363,20 +363,14 @@ python -m pytest tests/test_eval.py -v -s
 cat .mycoder/eval/report.md
 ```
 
-## 持续集成
+## 质量门(本地执行)
 
-CI 已实际配置于 [.github/workflows/ci.yml](../.github/workflows/ci.yml)，四个 job:
-
-1. **lint**: ruff check(Python 3.11)
-2. **mypy**: 类型检查
-3. **test**: Python 3.10/3.11/3.12 三版本矩阵,`pip install -e ".[test,dev]"` 后跑 `pytest --cov` 与 `mycoder eval --suite all`(离线 mock)
-4. **docker-build**: 依赖 test 通过后构建镜像(不推送)
-
-本地复现 CI 检查:
+项目当前不依赖远端 CI;质量门由以下本地命令构成(全部基于项目内置 `.conda` 环境),提交前建议跑一遍:
 
 ```bash
 conda activate D:\PythonProject\mycoder\.conda
-ruff check .
-mypy
-python -m pytest tests/ --cov=mycoder --cov-report=term
+ruff check .                                   # 静态 lint
+mypy                                           # 类型检查
+python -m pytest tests/ --cov=mycoder --cov-report=term   # 全量测试 + 覆盖率
+python -m mycoder eval --suite all --output .mycoder/eval-ci  # 离线评测冒烟
 ```

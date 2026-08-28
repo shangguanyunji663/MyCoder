@@ -12,7 +12,7 @@
 |------|------|
 | 环境位置 | `D:\PythonProject\mycoder\.conda\`(相对仓库即 `<repo>\.conda`) |
 | 管理方式 | Anaconda 以**路径(prefix)**方式管理,环境名显示为完整路径 |
-| Python 版本 | 3.11(pyproject 声明兼容 3.10+,CI 用 3.10/3.11/3.12 矩阵验证) |
+| Python 版本 | 3.11(pyproject 声明兼容 3.10+) |
 | 预装内容 | 全部运行时依赖 + dev/api/vector 可选组 + 项目本体可编辑安装(`pip install -e .`) |
 | 版本控制 | `.conda/` 已加入 .gitignore,**不入库** |
 

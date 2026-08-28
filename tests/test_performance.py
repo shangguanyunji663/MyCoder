@@ -16,7 +16,7 @@ from mycoder.state import Message  # noqa: E402
 from mycoder.tools import ToolContext, Workspace, build_registry  # noqa: E402
 
 GIGANTIC_FILE = "examples/giant_test.py"
-RESULTS = {}
+RESULTS: dict[str, dict[str, float]] = {}  # 显式注解:CI mypy job 仅装 mypy+pyyaml,无法推断空字典
 
 def measure(name, func, *args, **kwargs):
     """Measure execution time of a function"""

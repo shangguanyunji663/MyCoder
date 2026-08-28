@@ -20,6 +20,7 @@ import contextlib
 import json
 import logging
 import time
+from pathlib import Path
 from typing import Any, ClassVar
 
 from ..artifacts import ArtifactManager, Metrics, RunRecorder
@@ -98,6 +99,8 @@ def get_logger(config: Config) -> logging.Logger:
         else:
             formatter = logging.Formatter("%(asctime)s %(levelname)s %(message)s")
         if config.get("logging.file"):
+            # 全新 checkout(如 CI)下 .mycoder/ 不存在,FileHandler 会直接 FileNotFoundError
+            Path(config.get("logging.file")).parent.mkdir(parents=True, exist_ok=True)
             fh = logging.FileHandler(config.get("logging.file"), encoding="utf-8")
             fh.setFormatter(formatter)
             logger.addHandler(fh)

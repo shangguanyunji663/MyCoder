@@ -1,6 +1,5 @@
 # MyCoder — 本地 Coding Agent Harness
 
-[![CI](https://github.com/shangguanyunji663/MyCoder/actions/workflows/ci.yml/badge.svg)](https://github.com/shangguanyunji663/MyCoder/actions/workflows/ci.yml)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
@@ -107,7 +106,6 @@ mycoder/
 ├── environment.yml              # Conda 环境定义(重建项目内置 .conda 环境)
 ├── Dockerfile / docker-compose.yml / config/docker.yaml / .dockerignore
 ├── LICENSE                      # MIT
-├── .github/workflows/ci.yml     # CI: ruff / mypy / pytest(3.10-3.12) / Docker 构建
 ├── .conda/                      # 项目内置 Conda 环境文件夹(gitignored,env create 重建)
 ├── generate_test_file.py        # 生成巨型测试文件的脚本
 ├── config/
