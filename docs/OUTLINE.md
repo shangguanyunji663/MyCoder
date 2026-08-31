@@ -56,7 +56,7 @@
 - `redact.py`: Redactor(敏感信息脱敏)
 
 ### 8. 主循环 (agent/)
-- `harness.py`: AgentHarness(主调度循环,run/resume,on_event 埋点)
+- `harness.py`: AgentHarness(主调度循环,run/resume,空终答温和重问,on_event 埋点)
 - `orchestrator.py`: Orchestrator(子代理并行编排,独立子工作区)
 
 ### 9. 可观测性 (observability/)
@@ -71,7 +71,7 @@
 ### 11. 评测审计 (eval/)
 - `benchmark.py`: benchmark 数据加载(26 个手写任务 + 42 个冻结生成任务 + 检索用例)
 - `experiment.py`: 对照实验原语(compare_metrics, format_delta)
-- `runner.py`: EvalRunner(五层离线评测运行器,Layer 1-5)
+- `runner.py`: EvalRunner(五层离线评测运行器 Layer 1-5,并按需分发 real / real_baseline / embedder suite;real 系列不清空输出目录以支持三臂对照共存)
 - `judge.py`: LLM-as-judge 评委(严格 JSON 结论/解析兜底)
 - `real.py`: Layer 6 真实模型端到端评测(Ollama)
 - `raw_baseline.py`: Layer 6b 裸基线对照(single_shot / naive_loop 两臂,可与 Layer 6 并排三臂对照)
@@ -132,9 +132,9 @@
 - 4 个编码任务: 4/4 完成, 3/4 硬断言通过(LLM-as-judge 因评委超时 0/4,如实保留)
 
 ### Layer 6b 裸模型基线对照
-- 固定模型与任务集,只改"有没有 harness";single_shot / naive_loop 两臂低通过率
-  是预期测量结果,与 Layer 6 并排形成三臂对照;具体数字以实际运行为准
-  (`eval --suite real_baseline`,需 Ollama)
+- 固定模型与任务集,只改"有没有 harness";三臂实测硬断言 1/4 → 3/4 → 4/4
+  (single_shot / naive_loop / harness):工具循环带来主要跃升,完整 harness
+  借助治理/记忆/容错机制拿下全部任务(`eval --suite real_baseline`,需 Ollama)
 
 ### 安全边界
 - 回归任务通过率: 100%
@@ -155,7 +155,7 @@
 - mycoder/api/: server.py, __init__.py
 - mycoder/eval/: benchmark.py, experiment.py, runner.py, judge.py, real.py, raw_baseline.py, __init__.py
 
-### 测试 (18 个测试文件,268 个测试用例)
+### 测试 (18 个测试文件,272 个测试用例)
 - tests/conftest.py
 - tests/test_models.py (15 个用例)
 - tests/test_tools.py (21 个用例)
@@ -164,7 +164,7 @@
 - tests/test_context.py (19 个用例)
 - tests/test_memory.py (19 个用例)
 - tests/test_checkpoint.py (15 个用例)
-- tests/test_harness.py (15 个用例)
+- tests/test_harness.py (18 个用例)
 - tests/test_backend.py (9 个用例 — 重试/退避/流式/usage)
 - tests/test_cost.py (5 个用例 — 成本核算)
 - tests/test_eval.py (18 个用例 — 五层评测)
@@ -173,7 +173,7 @@
 - tests/test_api.py (7 个用例 — FastAPI SSE/后端切换/双跑对照)
 - tests/test_orchestrator.py (4 个用例 — 并行/降级/事件)
 - tests/test_real_eval.py (4 个用例 — LLM-as-judge/真实任务断言)
-- tests/test_real_baseline.py (6 个用例 — Layer 6b 裸基线两臂/工具白名单/三臂对照)
+- tests/test_real_baseline.py (7 个用例 — Layer 6b 裸基线两臂/工具白名单/三臂对照)
 - tests/test_performance.py (8 个用例 — 性能测试)
 
 ### 配置与文档

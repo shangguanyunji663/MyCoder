@@ -115,3 +115,19 @@ def test_baseline_skips_default_mock(tmp_path):
     report = RawBaselineRunner(Config(), output_dir=tmp_path / "out").run()
     assert report["skipped"] is True
     assert "local_openai" in report["summary"]
+
+
+def test_real_baseline_suite_does_not_wipe_output_dir(tmp_path):
+    """run_suite 对 real/real_baseline 不做整体 _reset:同一目录先跑 Layer 6
+    再跑 6b 时,先跑的报告(real_report.json)必须保留,三臂对照依赖它。"""
+    from mycoder.eval.runner import EvalRunner
+
+    out = tmp_path / "out"
+    out.mkdir()
+    marker = out / "real_report.json"
+    marker.write_text("{}", encoding="utf-8")
+
+    reports = EvalRunner(Config(), output_dir=str(out)).run_suite("real_baseline")
+
+    assert marker.exists()
+    assert reports["real_baseline"]["skipped"] is True

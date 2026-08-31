@@ -13,6 +13,7 @@
 
 ### 1. Agent Harness 主循环
 - 统一封装模型调用、工具执行、会话状态、checkpoint、运行日志
+- 空终答温和重问:模型返回"无工具调用且无内容"的空转回复时,自动注入提醒继续循环(`harness.empty_answer_nudges`,默认 1 次,0 = 关闭),checkpoint 序列化向后兼容
 - 支持 2 类模型后端:
   - **MockBackend**: 确定性脚本后端(测试/评测,全离线)
   - **LocalOpenAIBackend**: 本地 OpenAI 兼容后端(127.0.0.1:8080,带重试退避/流式/真实 token 计量)
@@ -66,14 +67,14 @@
       无治理/记忆/断点/安全链)两条裸基线臂,复用 Layer 6 同一任务集与硬断言;
       若存在 Layer 6 报告则自动并排成三臂对照,直接度量 harness 的增量价值
 - 26 个手写 benchmark 任务(回归17/上下文4/记忆4/恢复1) + 固定 seed 冻结基准 42 个任务 + 82 个检索查询(`retrieval.json` + `retrieval_extra.json`)
-- 268 项 pytest 自动化测试(18 个测试文件,含参数化安全边界与 Layer 6/6b 离线用例)
+- 272 项 pytest 自动化测试(18 个测试文件,含参数化安全边界与 Layer 6/6b 离线用例)
 - 对照实验: 固定任务、固定数据、仅改变系统开关
 - 运行工件聚合: 可复现的评测报告(JSON + Markdown)
 
 ### 7. 可观测性(链路追踪)
 - 零依赖 `Span` / `Tracer`(`observability/tracing.py`),导出 OTLP 风格 `trace.json`(含完整 span 层级与耗时)
 - 安装 `opentelemetry-api` 时自动桥接真实 OTel Tracer(缺失则静默降级)
-- Harness 通过最小侵入的 `on_event` 事件总线埋点:task_start / step_start / model_call / tool_call / checkpoint / task_end
+- Harness 通过最小侵入的 `on_event` 事件总线埋点:task_start / step_start / model_call / tool_call / step_end / checkpoint / task_end
 - `logging.format: text | json` 结构化日志(JSON 行可被 `json.loads` 解析)
 - 报告增加「耗时时间线与成本」小节
 
@@ -175,7 +176,7 @@ mycoder/
 │   ├── retrieval.json           # 核心检索召回数据(38 条查询)
 │   ├── retrieval_extra.json     # 扩展 4 领域 44 条查询(合计 82 条)
 │   └── real_tasks.json          # Layer 6 真实编码任务(4 个)
-├── tests/                       # pytest 测试套件(18 个文件,268 项)
+├── tests/                       # pytest 测试套件(18 个文件,272 项)
 │   ├── conftest.py
 │   ├── test_models.py           # 15 个用例
 │   ├── test_tools.py            # 21 个用例
@@ -184,7 +185,7 @@ mycoder/
 │   ├── test_context.py          # 19 个用例
 │   ├── test_memory.py           # 19 个用例
 │   ├── test_checkpoint.py       # 15 个用例
-│   ├── test_harness.py          # 15 个用例
+│   ├── test_harness.py          # 18 个用例(含空终答温和重问)
 │   ├── test_backend.py          # 9 个用例(重试/退避/流式/usage)
 │   ├── test_cost.py             # 5 个用例(成本核算)
 │   ├── test_eval.py             # 18 个用例(五层评测+benchmark 完整性)
@@ -193,7 +194,7 @@ mycoder/
 │   ├── test_api.py              # 7 个用例(FastAPI SSE/后端切换/双跑对照)
 │   ├── test_orchestrator.py     # 4 个用例(并行/降级/事件)
 │   ├── test_real_eval.py        # 4 个用例(LLM-as-judge 解析/真实任务断言)
-│   ├── test_real_baseline.py    # 6 个用例(Layer 6b 裸基线两臂/工具白名单/三臂对照)
+│   ├── test_real_baseline.py    # 7 个用例(Layer 6b 裸基线两臂/工具白名单/三臂对照)
 │   └── test_performance.py      # 8 个用例(性能测试)
 ├── examples/                    # 使用示例
 │   ├── demo.py                  # 综合演示
@@ -263,7 +264,7 @@ python examples/show_folded.py
 ### 运行测试
 
 ```bash
-# 完整测试套件(单元 + 性能,268 项)
+# 完整测试套件(单元 + 性能,272 项)
 python -m pytest tests/
 
 # 仅运行性能测试
@@ -359,6 +360,7 @@ python -m mycoder orchestrate --goal "..." --max-workers 4
 - `observability.enabled`: 是否导出 trace.json 链路追踪
 - `agent.orchestrator.enabled`: 子代理编排开关(默认关闭)
 - `agent.orchestrator.max_workers`: 并行子任务数(默认 4)
+- `harness.max_steps` / `harness.empty_answer_nudges`: 单任务最大步数 / 空终答温和重问次数(默认 1,0 = 关闭)
 - `api.host` / `api.port`: localhost API 地址
 
 ## 核心模块详解
@@ -392,18 +394,27 @@ python -m mycoder orchestrate --goal "..." --max-workers 4
 - 默认 HashingEmbedder 保持零依赖；`--suite embedder` 可对比 FastEmbed bge-small（首次运行需下载模型）。
 
 ### Layer 6 真实模型端到端结果(Ollama qwen3.5:2b)
-- 实测运行 4 个编码任务：4/4 完成，3/4 硬断言通过；总耗时约 963 秒。
-- qwen3.5:2b 的部分评委请求超时，最终 LLM-as-judge 通过率为 0/4；该结果如实保留在 `.mycoder/real/real_report.json`，不把硬断言通过伪装成模型评委通过。
-- 运行命令：`python examples/real_model_demo.py`；更大模型或更长评委超时配置可获得更稳定的 judge 结果。
+- 实测运行 4 个编码任务：4/4 完成，4/4 硬断言通过；总耗时约 278 秒。
+- 跨运行波动提示:上一轮实测 rt02 曾因模型返回空终答而失败(模型什么都没写就结束),
+  本轮模型正常完成 file_edit —— 2b 模型方差大,单次运行胜负仅供参考;为此 harness
+  新增空终答温和重问(见特性 1),把"交白卷"从静默完成变为可补救路径。
+- LLM-as-judge 通过率 0/4(评委为 2b 小模型,本轮全部给 0 分,不可靠);结果如实保留在
+  `.mycoder/real/real_report.json`,不把硬断言通过伪装成模型评委通过。
+- 运行命令:`python -m mycoder eval --suite real --output .mycoder/real`(或
+  `python examples/real_model_demo.py`);更大模型或更长评委超时配置可获得更稳定的 judge 结果。
 
 ### Layer 6b 裸模型基线对照(需 Ollama)
 - 回答"harness 比不用它好多少":固定模型与 `benchmarks/real_tasks.json` 任务集,
   跑 single_shot(单次调用,无工具循环)与 naive_loop(朴素 tool-calling 循环,
   无上下文治理/记忆/断点/安全链)两条裸基线臂,并与 Layer 6 的 harness 结果并排三臂对照。
+- 首次三臂实测(硬断言口径,同一 qwen3.5:2b):single_shot **1/4**(rt04 单次请求直接超时)、
+  naive_loop **3/4**、harness **4/4** —— 工具循环是本任务集成功率的主要跃升来源,
+  完整 harness 借助治理/记忆/容错机制拿下全部任务。prompt token 对比:
+  single_shot 529 / naive_loop 14564 / harness 115919(多步循环与系统提示的固有成本)。
 - 三臂共用同一套硬断言(`EvalRunner._check_expect`)与指标口径(token/成本/耗时),
   报告落盘 `real_baseline_report.json`,`comparison` 字段逐任务并排三臂通过情况。
-- 基线臂的低通过率是预期测量结果而非失败;具体数字以实际运行为准:
-  `python -m mycoder eval --suite real_baseline --output .mycoder/real`。
+- 运行:`python -m mycoder eval --suite real_baseline --output .mycoder/real`
+  (real / real_baseline 不清空输出目录,两份报告可共存)。
 
 ### 安全边界
 - 回归任务: 由离线 benchmark 持续验证(含正例、负例、边界)

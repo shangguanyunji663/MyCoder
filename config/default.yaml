@@ -30,6 +30,7 @@ model:
 harness:
   max_steps: 30                 # 单任务最大 agent 步数,防死循环
   max_tool_calls_per_turn: 8    # 单轮最多并行工具调用数
+  empty_answer_nudges: 1        # 空终答(无工具调用且无内容)温和重问次数,0 = 关闭
 
 # --- 长上下文治理 ---
 context:

@@ -51,7 +51,7 @@
 - **链路追踪**(`observability/tracing.py`):
   - 零依赖 `Span` / `Tracer`,导出 OTLP 风格 `trace.json`(含完整 span 层级与耗时)
   - 安装 `opentelemetry-api` 时自动桥接真实 OTel Tracer(缺失则静默降级)
-  - Harness 通过最小侵入的 `on_event` 事件总线埋点:task_start / step_start / model_call / tool_call / checkpoint / task_end
+  - Harness 通过最小侵入的 `on_event` 事件总线埋点:task_start / step_start / model_call / tool_call / step_end / checkpoint / task_end
 - **结构化日志**: `logging.format: text | json`,JSON 行可被 `json.loads` 解析
 - 日志: 关键事件记录到 .mycoder/harness.log
 
@@ -124,7 +124,7 @@ RunResult + Artifacts
 
 ### ContextManager
 - set_task(goal, files_hint, memory_block): 设置任务上下文
-- append_turn(assistant, tool_msgs): 追加一轮对话
+- append_turn(assistant, tool_msgs, user=None): 追加一轮对话(`user` 为可选的轮末用户提醒,空终答温和重问使用)
 - assemble(): 组装并裁剪,返回送入模型的消息列表
   - 深拷贝裁剪,不污染 raw_turns
   - 硬限额强制:逐级截断最长消息,保证 100% 预算内
@@ -165,13 +165,14 @@ RunResult + Artifacts
 ### AgentHarness
 - run(task): 主循环
 - resume(task_id): 从断点恢复
+- 空终答温和重问: 模型返回"无工具调用且无内容"的空转回复时,注入用户提醒继续循环(`harness.empty_answer_nudges`,默认 1,0 = 关闭);轮结构新增可选 `user` 位,checkpoint 序列化向后兼容
 - _execute_tools(): 安全链 + 执行 + 脱敏 + 记忆沉淀
 - _checkpoint(): 周期性/裁剪前/中断时保存断点
 - `build(config, backend, approver, on_event)`: 工厂装配;若传入 `on_event`(如 API 的 SSE EventBus),则默认 Tracer 与调用方回调**同时**收到语义事件
 
 ### Observability / Tracer
 - `Tracer(artifacts_root, enabled)`: 作为 `on_event` 消费者重建 span 生命周期
-- `handle(event)`: 按事件类型 task_start / step_start / model_call / tool_call / checkpoint / task_end 维护 span 树
+- `handle(event)`: 按事件类型 task_start / step_start / model_call / tool_call / step_end / checkpoint / task_end 维护 span 树
 - `export()`: 任务结束写出 `{artifacts_root}/{task_id}/trace.json`
 
 ### API 层(fastapi_server + event_bus)

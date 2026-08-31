@@ -73,7 +73,7 @@ Layer 7: 嵌入器对照          ─── HashingEmbedder vs FastEmbed bge-sma
 ```bash
 # 激活项目内置 .conda 环境(见文首),然后:
 
-# 运行完整测试套件(268 项)
+# 运行完整测试套件(272 项)
 python -m pytest tests/
 
 # 运行特定测试文件
@@ -285,7 +285,7 @@ python -m mycoder eval --suite retrieval
 - ✅ memory: 三层存储、去重、检索(substring/vector/hybrid)、持久化
 - ✅ vectors: HashingEmbedder/BM25/HybridRetriever 检索与打分
 - ✅ checkpoint: 断点保存/加载、漂移识别
-- ✅ harness: 主循环、安全拦截、去重、记忆、恢复
+- ✅ harness: 主循环、安全拦截、去重、记忆、恢复、空终答温和重问
 - ✅ observability: Tracer/trace.json、on_event 埋点、JSON 结构化日志
 - ✅ api: FastAPI + SSE 事件流、EventBus、实时监控页、后端按请求切换与双跑对照(/api/compare)
 - ✅ orchestrator: 并行编排、失败降级、事件发射
@@ -306,7 +306,7 @@ python -m mycoder eval --suite retrieval
 | test_context.py | 19 | CJK/ASCII token估算, fold/fold_to_1/enforce_budget, 深拷贝安全 deterministic replay, 摘要器 |
 | test_memory.py | 19 | remember_task/update/parent_link, file_symbols/same_hash_skip, relation/link, search(3kind), followup_context, save_load_roundtrip, stats, disabled_no_save |
 | test_checkpoint.py | 15 | save_load_unicode/overwrite, exists/list_all, drift_compare(modified/added/deleted/empty), summary_text |
-| test_harness.py | 15 | run_flow(complete/artifacts/metrics/max_steps/unknown_tool/invalid_params), safety_intercept, dedup, resume_flow |
+| test_harness.py | 18 | run_flow(complete/artifacts/metrics/max_steps/unknown_tool/invalid_params), safety_intercept, dedup, resume_flow, 空终答重问(触发/预算耗尽/可关闭) |
 | test_backend.py | 9 | 重试/指数退避(429/5xx/Retry-After), usage 解析, 流式 complete_stream |
 | test_cost.py | 5 | 按价目表核算 token 成本, 缺价目不计费 |
 | test_eval.py | 18 | benchmark_data, eval_layers(回归/上下文/记忆/恢复/检索), report_writing |
@@ -315,10 +315,10 @@ python -m mycoder eval --suite retrieval
 | test_api.py | 7 | health/Vue 监控页, 提交→SSE→完成事件, 未知任务 404, 后端字段非法 400, 显式 local_openai 工厂注入, script 锁定 Mock, 双跑对照两臂元数据 |
 | test_orchestrator.py | 4 | 并行编排, 失败降级(partial), 默认 planner 单子任务, 事件发射 |
 | test_real_eval.py | 4 | LLM-as-judge JSON 解析/兜底, 真实任务硬断言与 mock 跳过 |
-| test_real_baseline.py | 6 | Layer 6b 代码块 path 解析, single_shot 落盘断言, naive_loop 工具执行与指标, 工具白名单排除 shell/memory, 三臂对照 harness 参考, mock 优雅跳过 |
+| test_real_baseline.py | 7 | Layer 6b 代码块 path 解析, single_shot 落盘断言, naive_loop 工具执行与指标, 工具白名单排除 shell/memory, 三臂对照 harness 参考, mock 优雅跳过, suite 不清空输出目录 |
 | test_performance.py | 8 | 文件读取/列表/Grep/记忆/上下文/断点/工作区/工具注册 性能测试 |
 
-**总计**: 268 个测试用例，18 个测试文件(含参数化展开数量);当前基线结果 266 passed + 2 skipped。
+**总计**: 272 个测试用例，18 个测试文件(含参数化展开数量);当前基线结果 270 passed + 2 skipped。
 
 ## 确定性保证
 所有测试使用：
@@ -335,7 +335,7 @@ python -m mycoder eval --suite retrieval
 ```bash
 # 确保在 mycoder 项目根目录(即 pyproject.toml 所在目录)执行,
 # 并确认使用的是项目内置解释器:
-.conda/python.exe -m pytest tests/ --collect-only    # 应列出 268 项
+.conda/python.exe -m pytest tests/ --collect-only    # 应列出 272 项
 ```
 
 ### 导入错误

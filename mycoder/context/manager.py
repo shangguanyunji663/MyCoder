@@ -60,8 +60,13 @@ class ContextManager:
         self.files_hint = list(files_hint or [])
         self.memory_block = memory_block
 
-    def append_turn(self, assistant: Message, tool_msgs: list[Message]) -> None:
-        self.raw_turns.append({"assistant": assistant, "tool": list(tool_msgs)})
+    def append_turn(self, assistant: Message, tool_msgs: list[Message],
+                    user: Message | None = None) -> None:
+        """追加一轮对话;user 为可选的轮末用户追问(空终答重问提醒)。"""
+        turn: dict = {"assistant": assistant, "tool": list(tool_msgs)}
+        if user is not None:
+            turn["user"] = user
+        self.raw_turns.append(turn)
 
     def set_memory_block(self, memory_block: str) -> None:
         self.memory_block = memory_block
@@ -86,6 +91,8 @@ class ContextManager:
         for t in turns:
             out.append(t["assistant"])
             out.extend(t["tool"])
+            if t.get("user") is not None:
+                out.append(t["user"])
         return out
 
     def _fold_summary(self, turns: list[dict]) -> str:

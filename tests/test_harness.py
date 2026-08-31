@@ -174,3 +174,35 @@ class TestResumeFlow:
         h = make_harness()
         r = h.resume("nope")
         assert r.status == "error"
+
+
+class TestEmptyAnswerNudge:
+    """空终答温和重问:小模型偶发"无工具调用 + 空文本"的空转,给一次补交机会。"""
+
+    def test_empty_final_answer_nudged_once_then_completes(self, make_harness, task):
+        script = [
+            {"content": ""},  # 空终答 -> 触发一次重问
+            {"tool_calls": [{"name": "file_write",
+                             "arguments": {"path": "out.py", "content": "print('hi')\n"}}]},
+            {"content": "已创建 out.py。"},
+        ]
+        h = make_harness(script=script)
+        r = h.run(task)
+        assert r.status == "completed"
+        assert r.metrics["steps"] == 3
+        assert h.workspace.read_text("out.py") == "print('hi')\n"
+
+    def test_empty_answer_budget_exhausted_terminates_honestly(self, make_harness, task):
+        script = [{"content": ""}, {"content": ""}]
+        h = make_harness(script=script)
+        r = h.run(task)
+        assert r.status == "completed"
+        assert r.final_answer == ""
+        assert r.metrics["steps"] == 2  # 重问 1 次后仍空,如实终答
+
+    def test_nudge_disabled_by_config(self, make_harness, task):
+        h = make_harness(script=[{"content": ""}],
+                         **{"harness.empty_answer_nudges": 0})
+        r = h.run(task)
+        assert r.status == "completed"
+        assert r.metrics["steps"] == 1

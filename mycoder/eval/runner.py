@@ -80,7 +80,11 @@ class EvalRunner:
 
     # ------------------------------------------------------------------
     def run_suite(self, suite: str = "all") -> dict[str, dict]:
-        self._reset()
+        # real / real_baseline 的报告与工作区由各自 Runner 增量管理(只建不清):
+        # 整体 _reset 会在同目录先跑 real 再跑 real_baseline 时清掉对方报告,
+        # 而 README 的三臂对照流程正是要两个报告共存于同一目录。
+        if suite not in ("real", "real_baseline"):
+            self._reset()
         tasks = load_benchmarks(self.benchmark_path)
         reports: dict[str, dict] = {}
         if suite in ("all", "regression"):

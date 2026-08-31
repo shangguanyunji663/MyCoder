@@ -53,13 +53,19 @@ def _msg_from_dict(d: dict) -> Message:
 
 
 def _turn_to_dict(t: dict) -> dict:
-    return {"assistant": _msg_to_dict(t["assistant"]),
-            "tool": [_msg_to_dict(m) for m in t["tool"]]}
+    d = {"assistant": _msg_to_dict(t["assistant"]),
+         "tool": [_msg_to_dict(m) for m in t["tool"]]}
+    if t.get("user") is not None:
+        d["user"] = _msg_to_dict(t["user"])
+    return d
 
 
 def _turn_from_dict(t: dict) -> dict:
-    return {"assistant": _msg_from_dict(t["assistant"]),
-            "tool": [_msg_from_dict(m) for m in t["tool"]]}
+    d = {"assistant": _msg_from_dict(t["assistant"]),
+         "tool": [_msg_from_dict(m) for m in t["tool"]]}
+    if t.get("user") is not None:
+        d["user"] = _msg_from_dict(t["user"])
+    return d
 
 
 def _metrics_restore(snap: dict) -> Metrics:
@@ -72,6 +78,14 @@ def _metrics_restore(snap: dict) -> Metrics:
             setattr(m, f, snap[f])
     m.compression_ratios = list(snap.get("compression_ratios", []))
     return m
+
+
+# 空终答重问提醒:小模型偶发"无工具调用 + 空文本"的空转,温和追问一次
+# (次数由 harness.empty_answer_nudges 配置,默认 1;0 = 关闭)。
+_EMPTY_ANSWER_REMINDER = (
+    "你的上一条回复是空的。请继续完成当前任务:对文件的修改必须通过 "
+    "file_edit / file_write 工具落盘,完成后再给出简洁的最终回答。"
+)
 
 
 class JsonFormatter(logging.Formatter):
@@ -264,6 +278,8 @@ class AgentHarness:
                     "follow_up_of": task.follow_up_of, "reason": reason})
 
         max_steps = int(self.config.get("harness.max_steps", 30))
+        max_empty_nudges = int(self.config.get("harness.empty_answer_nudges", 1))
+        empty_nudges = 0
         status, final_answer, error = "completed", "", None
         steps: list[Step] = []
 
@@ -296,10 +312,17 @@ class AgentHarness:
                 assistant = Message("assistant", resp.content,
                                     tool_calls=resp.tool_calls or None)
 
-                # 3) 终答判断
+                # 3) 终答判断;空终答(无工具调用且无内容)不直接终止,先温和重问
+                #    一次给模型补交机会(小模型典型失败模式),重问后仍空则如实终答
                 if not resp.tool_calls:
+                    nudge = (not (resp.content or "").strip()
+                             and empty_nudges < max_empty_nudges)
+                    if nudge:
+                        empty_nudges += 1
                     final_answer = resp.content
-                    self.context.append_turn(assistant, [])
+                    self.context.append_turn(
+                        assistant, [],
+                        user=Message("user", _EMPTY_ANSWER_REMINDER) if nudge else None)
                     self._emit({"type": "step_end", "index": step_idx, "ts": now_iso()})
                     steps.append(Step(index=step_idx, assistant=assistant,
                                       prompt_tokens=p_tokens,
@@ -318,6 +341,10 @@ class AgentHarness:
                                      "tool_calls": [], "latency_ms": latency_ms,
                                      "prompt_tokens": p_tokens, "completion_tokens": c_tokens,
                                      "ts": now_iso()})
+                    if nudge:
+                        recorder.record({"type": "empty_answer_nudge", "step": step_idx,
+                                         "ts": now_iso()})
+                        continue
                     break
 
                 # 4) 执行工具
