@@ -27,7 +27,7 @@
 ### 2. 模型后端 (models/)
 - `base.py`: ModelBackend 抽象基类 + ModelResponse
 - `mock.py`: MockBackend(确定性脚本后端,支持 state/load_state)
-- `local_openai.py`: LocalOpenAIBackend(urllib POST 到 127.0.0.1:8080, arguments 保持 JSON 字符串)
+- `local_openai.py`: LocalOpenAIBackend(urllib POST 到配置的 base_url,代码默认 127.0.0.1:8080/v1,内置 default.yaml 预置 Ollama 11434/v1, arguments 保持 JSON 字符串)
 
 ### 3. 工具框架 (tools/)
 - `base.py`: Tool 基类 + ToolResult + ToolContext + ToolRegistry
@@ -129,7 +129,7 @@
 - MRR@5: substring = 0.44, hybrid = 0.98
 
 ### Layer 6 真实模型端到端(Ollama qwen3.5:2b)
-- 4 个编码任务: 4/4 完成, 3/4 硬断言通过(LLM-as-judge 因评委超时 0/4,如实保留)
+- 4 个编码任务: 4/4 完成, 4/4 硬断言通过;LLM-as-judge 通过率 0/4(评委为 2b 小模型,输出无法解析全部给 0 分,不可靠,结果如实保留)
 
 ### Layer 6b 裸模型基线对照
 - 固定模型与任务集,只改"有没有 harness";三臂实测硬断言 1/4 → 3/4 → 4/4

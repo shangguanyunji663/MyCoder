@@ -104,7 +104,7 @@ RunResult + Artifacts
 
 ### ModelBackend
 - **MockBackend**: 脚本化响应,支持 state()/load_state() 以支持 resume
-- **LocalOpenAIBackend**: urllib POST 到 127.0.0.1:8080/v1/chat/completions, arguments 保持 JSON 字符串格式
+- **LocalOpenAIBackend**: urllib POST 到 {base_url}/chat/completions(代码默认 127.0.0.1:8080/v1,内置 default.yaml 预置 Ollama 11434/v1), arguments 保持 JSON 字符串格式
 
 ### ToolRegistry
 - 7 类工具: file_read/write/edit/list, grep_search, shell_exec, memory_query
@@ -201,11 +201,11 @@ RunResult + Artifacts
 
 `examples/giant_test.py` 是一个自动生成的约 4669 行测试文件,用于压力测试和上下文治理演示:
 
-- **100 个函数**: func_0001 到 func_0100
+- **500 个函数**: func_0001 到 func_0500
 - **排序算法**: bubble/quick/merge/heap/insertion/selection/counting/radix sort
 - **设计模式**: Singleton/Factory/Builder/Observer/Strategy/Decorator/Adapter/Proxy/Command/StateMachine/Chain of Responsibility
 - **数据结构**: ListNode/LinkedList/TreeNode/BinaryTree/TrieNode/Trie/Graph (含 BFS/DFS/最短路径/环检测)
-- **8 个类**: 带数据存储/统计/__repr__ 的通用容器类
+- **20 个类**: 带数据存储/统计/__repr__ 的通用容器类
 
 生成方式: `python generate_test_file.py`
 

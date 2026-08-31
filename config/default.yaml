@@ -13,7 +13,7 @@ workspace:
 #   1. 改这里的 backend: local_openai(需重启生效)
 #   2. 运行期临时切换: python -m mycoder run ... --backend local_openai
 #   3. 网页监控页「执行后端」选 Ollama,或用双跑对比按钮
-# 注意:258 项 pytest 与评测 L1-L5 不读此开关,它们显式使用 MockBackend。
+# 注意:全部 272 项 pytest 与评测 L1-L5 不读此开关,它们显式使用 MockBackend。
 # CLI/API 默认加载内置默认值;要用本文件请显式传 --config config/default.yaml。
 model:
   backend: mock             # mock(默认,离线确定性剧本) | local_openai(Ollama 真模型)

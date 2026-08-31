@@ -65,7 +65,7 @@ Layer 7: 嵌入器对照          ─── HashingEmbedder vs FastEmbed bge-sma
 ### 巨型测试文件 (examples/giant_test.py)
 用于性能测试和上下文治理演示的自动生成文件：
 - **行数**: ~4669 行
-- **内容**: 100 个函数 + 排序算法(8类) + 设计模式(10类) + 数据结构(6类) + 8 个通用容器类
+- **内容**: 500 个函数 + 排序算法(8 类) + 设计模式(11 类) + 数据结构(7 类: 链表/二叉树/Trie/图) + 20 个通用容器类
 - **已随仓库提交**;如需重新生成: `python generate_test_file.py`
 
 ## 运行测试
@@ -318,7 +318,7 @@ python -m mycoder eval --suite retrieval
 | test_real_baseline.py | 7 | Layer 6b 代码块 path 解析, single_shot 落盘断言, naive_loop 工具执行与指标, 工具白名单排除 shell/memory, 三臂对照 harness 参考, mock 优雅跳过, suite 不清空输出目录 |
 | test_performance.py | 8 | 文件读取/列表/Grep/记忆/上下文/断点/工作区/工具注册 性能测试 |
 
-**总计**: 272 个测试用例，18 个测试文件(含参数化展开数量);当前基线结果 270 passed + 2 skipped。
+**总计**: 272 个测试用例，18 个测试文件(含参数化展开数量);当前基线结果 270 passed + 2 skipped(2 个 fastembed 可选用例因模型需首次下载,离线环境运行期跳过,联网后 272 全绿)。
 
 ## 确定性保证
 所有测试使用：

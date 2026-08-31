@@ -230,7 +230,7 @@ conda env create -p .conda -f environment.yml
 .conda/python.exe -m pytest tests/
 ```
 
-预期:全部通过(272 项,含 8 项性能测试),末尾形如 `===== 272 passed in XXs =====`。**习惯:以后任何改动之前先跑一遍,留下绿色基线;改动之后再跑,红了就是你改坏的。**
+预期:全部通过(272 项收集,含 8 项性能测试),末尾形如 `===== 270 passed, 2 skipped in XXs =====`(2 个 fastembed 可选用例离线运行期跳过,联网下载 bge-small 后 272 全绿)。**习惯:以后任何改动之前先跑一遍,留下绿色基线;改动之后再跑,红了就是你改坏的。**
 
 只想快速验证某个模块?指定文件即可:
 
@@ -1997,7 +1997,7 @@ TaskInput → Harness.run() → [assemble → complete → check → execute →
 
 读完本指南后,建议按以下顺序实操(均已预装,`conda activate D:\PythonProject\mycoder\.conda` 后直接运行):
 
-1. `.conda/python.exe -m pytest tests/` — 全部 272 项测试通过,建立"改动前基线"
+1. `.conda/python.exe -m pytest tests/` — 全部测试通过(离线基线 270 passed + 2 skipped),建立"改动前基线"
 2. `python examples/context_demo.py` — 直观看到上下文治理的压缩效果
 3. `python -m mycoder eval --suite all --output .mycoder/eval` — 生成五层评测报告并打开 report.md
 4. `python -m mycoder serve` + 浏览器打开 http://127.0.0.1:8910/ — Vue 监控页提交任务,SSE 实时看事件流
@@ -2100,8 +2100,8 @@ TaskInput → Harness.run() → [assemble → complete → check → execute →
 | `workspace.allow_absolute` | `false` | 是否允许绝对路径 | 第 3 站 |
 | `model.backend` | `mock` | `mock` / `local_openai` | 第 2 站 |
 | `model.mock.seed` | `42` | Mock 确定性种子 | 第 2 站 |
-| `model.local_openai.base_url` | `http://127.0.0.1:8080/v1` | OpenAI 兼容端点 | 第 2 站 |
-| `model.local_openai.model` | `qwen2.5-coder-7b` | 模型名(须与服务端一致) | 第 2 站 |
+| `model.local_openai.base_url` | `http://127.0.0.1:8080/v1`(代码默认;default.yaml 预置 Ollama 为 11434/v1) | OpenAI 兼容端点 | 第 2 站 |
+| `model.local_openai.model` | `qwen2.5-coder-7b`(代码默认;default.yaml 预置 qwen3.5:2b) | 模型名(须与服务端一致) | 第 2 站 |
 | `model.local_openai.temperature` | `0.0` | 采样温度 | 第 2 站 |
 | `model.local_openai.timeout_seconds` | `60` | 请求超时 | 第 2 站 |
 | `model.local_openai.max_retries` | `3` | 重试次数 | 第 2 站 |

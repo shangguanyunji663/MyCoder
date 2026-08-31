@@ -16,7 +16,7 @@
 - 空终答温和重问:模型返回"无工具调用且无内容"的空转回复时,自动注入提醒继续循环(`harness.empty_answer_nudges`,默认 1 次,0 = 关闭),checkpoint 序列化向后兼容
 - 支持 2 类模型后端:
   - **MockBackend**: 确定性脚本后端(测试/评测,全离线)
-  - **LocalOpenAIBackend**: 本地 OpenAI 兼容后端(127.0.0.1:8080,带重试退避/流式/真实 token 计量)
+  - **LocalOpenAIBackend**: 本地 OpenAI 兼容后端(内置 default.yaml 指向本地 Ollama 127.0.0.1:11434/v1,代码默认 8080/v1,带重试退避/流式/真实 token 计量)
 - 7 类工具: file_read/write/edit/list, grep_search, shell_exec, memory_query
 - 3 类运行工件: trajectory.jsonl, checkpoint.json, metrics.json + report.md
 

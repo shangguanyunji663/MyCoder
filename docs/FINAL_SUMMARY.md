@@ -15,18 +15,29 @@
 ```
 mycoder/                          # 项目根目录
 ├── README.md                     # 项目说明文档
-├── pyproject.toml                # 项目配置 (setuptools + pytest)
+├── CHANGELOG.md                  # 变更日志(与 conventional commits 对应)
+├── LICENSE                       # MIT
+├── pyproject.toml                # 项目配置 (setuptools + pytest, 可选依赖组 api/vector/otel/dev)
 ├── requirements.txt              # pip 依赖清单 (PyYAML >= 6.0, pytest)
+├── requirements-dev.txt          # 测试与开发工具(pytest/ruff/mypy)
+├── requirements-api.txt          # FastAPI + uvicorn + httpx
+├── requirements-vector.txt       # fastembed 真实嵌入器
+├── requirements-project.txt      # 完整环境 = dev+api+vector+可编辑安装
+├── environment.yml               # Conda 环境定义(重建项目内置 .conda 环境)
 ├── .gitignore                    # Git 忽略规则
 ├── generate_test_file.py         # 生成巨型测试文件(giant_test.py)的脚本
 ├── config/
 │   └── default.yaml              # 默认配置文件 (含所有可配置项)
 ├── benchmarks/
-│   └── tasks.json                # 26 个手写 benchmark 任务(另有冻结基准 tasks.generated.json 42 个)
+│   ├── tasks.json                # 26 个手写 benchmark 任务(回归17/上下文4/记忆4/恢复1)
+│   ├── tasks.generated.json      # 固定 seed 冻结基准(42 个任务,入库保证可复现)
+│   ├── retrieval.json            # 核心检索召回数据(38 条查询)
+│   ├── retrieval_extra.json      # 扩展 4 领域 44 条查询(合计 82 条)
+│   └── real_tasks.json           # Layer 6 真实编码任务(4 个)
 ├── mycoder/                      # 核心代码包 (~35 Python 文件)
 │   ├── __init__.py               # 包初始化
 │   ├── __main__.py               # python -m mycoder 入口
-│   ├── cli.py                    # CLI 命令行接口 (run/resume/serve/eval/benchmark/artifacts/doctor)
+│   ├── cli.py                    # CLI 命令行接口 (run/resume/serve/orchestrate/eval/benchmark/artifacts/doctor)
 │   ├── config.py                 # Config 配置加载器 (支持 YAML/JSON, 深合并)
 │   ├── state.py                  # 会话状态模型 (Message, ToolCall, Step, TaskInput, RunResult)
 │   ├── util.py                   # 通用工具函数 (哈希、原子写、时间戳、截断等)
@@ -75,7 +86,8 @@ mycoder/                          # 项目根目录
 │   │   ├── server.py             # HTTP 服务 (127.0.0.1:8910, 标准库 ThreadingHTTPServer)
 │   │   ├── event_bus.py          # TaskEventBus (进程内事件队列)
 │   │   ├── fastapi_server.py     # FastAPI + SSE 实现 (可选依赖)
-│   │   ├── trace_page.py         # vanilla JS 实时追踪页
+│   │   ├── monitor_page.py       # Vue 3 运行监控页 (本地 vendored,零构建)
+│   │   ├── static/vue.global.prod.js  # vendored Vue 3 运行时
 │   │   └── __init__.py
 │   │
 │   ├── cost.py                   # 按价目表核算每次运行成本
@@ -114,12 +126,17 @@ mycoder/                          # 项目根目录
 │   ├── demo.py                   # 综合演示
 │   ├── giant_test.py             # 巨型测试文件(~4669行, 算法/数据结构/设计模式)
 │   ├── context_demo.py           # 上下文治理演示(15轮模拟)
-│   └── show_folded.py            # 折叠后消息展示工具
+│   ├── show_folded.py            # 折叠后消息展示工具
+│   └── real_model_demo.py        # Layer 6 Ollama 真实模型端到端演示
 │
 └── docs/                         # 文档目录
     ├── ARCHITECTURE.md           # 架构设计文档
     ├── OUTLINE.md                # 项目大纲/结构说明
     ├── TESTING.md                # 测试方法说明
+    ├── LEARNING_GUIDE.md         # 学习指南(初学者推荐起点)
+    ├── IMPROVEMENT_PLAN.md       # 企业化改造计划
+    ├── EVAL_HARDENING.md         # 评测加固方案
+    ├── WEB_BACKEND_SWITCH.md     # Web 后端切换与一键双跑对照设计记录
     └── FINAL_SUMMARY.md          # 本文件(最终交付总结)
 ```
 
@@ -168,7 +185,7 @@ for step_idx in range(max_steps):
 |------|------|---------|
 | `tokens.py` | Token 估算 (中文按字/英文按4字符/token) | `estimate_tokens(text)`, `estimate_messages(messages)` |
 | `summarizer.py` | 历史摘要器 | `DeterministicSummarizer.summarize_turn(step, assistant, tools)` |
-| `manager.py` | ContextManager (组装+裁剪) | `set_task(goal, files_hint, memory_block)`, `append_turn(assistant, tool_msgs)`, `assemble()` → `list[Message]` |
+| `manager.py` | ContextManager (组装+裁剪) | `set_task(goal, files_hint, memory_block)`, `append_turn(assistant, tool_msgs, user=None)`, `assemble()` → `list[Message]` |
 
 **三层裁剪策略 (按优先级)**:
 1. **fold_old_turns**: 折叠超出 `keep_last_turns` 的旧轮次为滚动摘要
@@ -230,8 +247,8 @@ mem.has_fresh_summary(path, digest)              → bool
 - Agent 使用 `memory_query` 工具获取摘要而非 `file_read` 重读文件
 
 **效果**:
-- Follow-up 阶段重复读文件次数: **60 → 0 次**
-- 任务正确率: **66.7% → 100%**
+- Follow-up 阶段重复读文件次数: **2 → 0 次**
+- 任务正确率: **100%**
 
 **验证方法**:
 - 单元测试: `tests/test_memory.py` — remember_task/update, remember_file/hash一致跳过, search, followup_context, save/load 持久化
@@ -375,9 +392,9 @@ class ApprovalProvider:
 ```
 Layer 1: Harness 回归测试
   ├─ 目标: 验证运行时稳定性
-  ├─ 方法: 4 个 regression 任务端到端执行
+  ├─ 方法: regression 任务端到端执行(手写 17 个 + 冻结生成基准合并加载)
   ├─ 断言: status=="completed", 3类工件齐全, expect(files_created, final_contains)
-  └─ 通过: 4/4 ✓
+  └─ 通过: 32/32 ✓(含负例/边界)
 
 Layer 2: 上下文治理评测
   ├─ 目标: 验证预算裁剪收益
@@ -398,15 +415,17 @@ Layer 4: 恢复正确性评测
 
 Layer 5: 检索召回评测
   ├─ 目标: 验证同义改写查询下 substring / vector / hybrid 的召回
-  ├─ 方法: 6 个同义改写查询, 对照 recall@1/3/5
-  └─ 通过: hybrid recall@3=100%, substring=0%, hybrid 全面胜出 ✓
+  ├─ 方法: 82 条查询(exact 23/synonym 29/distractor 11/empty 19), 对照 recall@1/3/5 + MRR@5
+  └─ 通过: 平均 recall@1/3/5 substring 28%/28%/28% vs hybrid 61%/63%/63%,
+           MRR@5 0.44 vs 0.98;核心同义改写查询上 hybrid recall@3=100% 而 substring=0% ✓
 ```
 
 **Benchmark 数据集** (`benchmarks/tasks.json`):
-- **Regression (4)**: t01_create_file, t02_read_file, t03_edit_file, t04_list_grep
-- **Context (3)**: t05_long_refactor, t06_long_search, t07_long_multifile
+- **Regression (17)**: t01_create_file, t02_read_file, t03_edit_file, t04_list_grep 等(含正例/负例/边界展开)
+- **Context (4)**: t05_long_refactor, t06_long_search, t07_long_multifile, t26c_budget_edge
 - **Memory (4)**: t08_build_utils (+ t09_followup), t10_build_config (+ t11_followup)
 - **Resume (1)**: t12_resume_scenario (5 steps for interrupt/resume)
+- 另有固定 seed 冻结基准 `tasks.generated.json`(42 个任务,加载时合并)
 
 ---
 
@@ -417,11 +436,11 @@ Layer 5: 检索召回评测
 ### 巨型测试文件
 
 `examples/giant_test.py` 由 `generate_test_file.py` 自动生成，包含:
-- **100 个函数**: func_0001 到 func_0100，每个执行模乘计算
+- **500 个函数**: func_0001 到 func_0500，每个执行模乘计算
 - **排序算法 (8 种)**: bubble/quick/merge/heap/insertion/selection/counting/radix sort
-- **设计模式 (10 种)**: Singleton/Factory/Builder/Observer/Strategy/Decorator/Adapter/Proxy/Command/StateMachine/Chain of Responsibility
-- **数据结构 (6 种)**: ListNode/LinkedList/TreeNode/BinaryTree/TrieNode/Trie/Graph (含 BFS/DFS/Dijkstra/环检测)
-- **8 个通用容器类**: 带数据存储/历史记录/统计/__repr__
+- **设计模式 (11 种)**: Singleton/Factory/Builder/Observer/Strategy/Decorator/Adapter/Proxy/Command/StateMachine/Chain of Responsibility
+- **数据结构 (7 类)**: ListNode/LinkedList(链表)/TreeNode/BinaryTree(二叉树)/TrieNode/Trie(Trie)/Graph (含 BFS/DFS/Dijkstra/环检测)
+- **20 个通用容器类**: 带数据存储/历史记录/统计/__repr__
 
 ```bash
 # 生成巨型测试文件
@@ -498,10 +517,10 @@ python generate_test_file.py
 
 | 测试文件 | 用例数 | 测试内容 |
 |----------|--------|----------|
-| test_models.py | 14 | Mock 脚本 progression/state恢复, LocalOpenAI parse(含 arguments 字符串格式), 工具schema |
+| test_models.py | 15 | Mock 脚本 progression/state恢复, LocalOpenAI parse(含 arguments 字符串格式), 工具schema格式 |
 | test_tools.py | 21 | 每种工具的 execute + error case + meta 字段 |
 | test_sandbox.py | 15 | PathEscapeError 拦截, rel兼容, snapshot 指纹, list过滤隐藏 |
-| test_safety.py | 27 | validate_params(11组合)/escape(4场景)/shell(4场景)/HITL(3策略)/dedup(3)/redact(5) |
+| test_safety.py | 70 | validate_params(参数化组合)/escape/shell/HITL/dedup/redact 边界展开 |
 | test_context.py | 19 | CJK/ASCII token估计, fold/fold_to_1/enforce_budget, 深拷贝安全, deterministic replay, 摘要器 |
 | test_memory.py | 19 | remember_task/update/parent_link, file_symbols/same_hash_skip, search(3模式), followup_context, save_load |
 | test_checkpoint.py | 15 | save_load_unicode/overwrite, exists/list_all, drift_compare, summary_text |
@@ -525,13 +544,14 @@ python generate_test_file.py
 
 ### config/default.yaml
 
-| 节 | 关键配置项 | 默认值 | 说明 |
-|----|-----------|--------|------|
+| 配置项 | 默认值 | 说明 |
+|--------|--------|------|
 | workspace.root | `"."` | 工具沙箱边界 |
 | model.backend | `"mock"` | mock \|\| local_openai |
 | model.mock.seed | `42` | 脚本后端确定性种子 |
-| model.local_openai.base_url | `"http://127.0.0.1:8080/v1"` | OpenAI兼容服务地址 |
+| model.local_openai.base_url | `"http://127.0.0.1:11434/v1"` | OpenAI兼容服务地址(default.yaml 预置 Ollama;代码内置默认为 8080/v1) |
 | harness.max_steps | `30` | 防死循环上限 |
+| harness.empty_answer_nudges | `1` | 空终答温和重问次数(0 = 关闭) |
 | context.budget_tokens | `4000` | 软预算(触发折叠) |
 | context.hard_limit_tokens | `6000` | 硬上限(强制截断) |
 | context.keep_last_turns | `6` | 保留最近N轮原文 |
@@ -555,6 +575,7 @@ python generate_test_file.py
 | agent.orchestrator.enabled | `false` | 子代理编排开关(默认关闭) |
 | agent.orchestrator.max_workers | `4` | 并行子任务数 |
 | model.pricing | `{}` | 成本核算价目表(每 1k token 美元) |
+| eval.real_baseline.* | 见 default.yaml | Layer 6b 裸基线对照(任务集/harness 参考臂报告/步数预算) |
 
 ---
 
@@ -588,7 +609,7 @@ python generate_test_file.py
 
 本项目实现了完整的本地 Coding Agent Harness, 涵盖:
 
-✅ **9 大核心模块** — Harness主循环 / 上下文治理 / 结构化记忆 / Checkpoint+漂移 / 工具安全 / 评测审计  
+✅ **10 大核心模块** — Harness主循环 / 上下文治理 / 结构化记忆 / Checkpoint+漂移 / 工具安全 / 评测审计 / 可观测性 / FastAPI+SSE API / 子代理编排 / 成本核算  
 ✅ **2 类模型后端** — MockBackend(全离线脚本化) / LocalOpenAIBackend(127.0.0.1:port)  
 ✅ **7 类工具** — file_read/write/edit/list, grep, shell, memory_query  
 ✅ **3 类运行工件** — trajectory.jsonl(轨迹) + checkpoint.json(断点) + metrics.json+report.md(报告)  
@@ -596,5 +617,5 @@ python generate_test_file.py
 ✅ **272 项自动化测试** — 覆盖全部模块 + 性能测试, 当前基线 270 passed + 2 skipped  
 ✅ **8 维度性能测试** — 使用巨型文件(~4669行)进行压力测试  
 ✅ **上下文治理演示** — context_demo.py 展示三层裁剪策略  
-✅ **完整文档** — README / ARCHITECTURE / OUTLINE / TESTING / FINAL_SUMMARY  
+✅ **完整文档** — README / CHANGELOG / ARCHITECTURE / OUTLINE / TESTING / LEARNING_GUIDE / FINAL_SUMMARY / IMPROVEMENT_PLAN / EVAL_HARDENING / WEB_BACKEND_SWITCH  
 ✅ **本地运行** — 全部 localhost 127.0.0.1, 无云端服务依赖
